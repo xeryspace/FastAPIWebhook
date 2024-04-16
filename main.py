@@ -9,7 +9,7 @@ api_key = 'ULI4j96SQhGePVhxCu'
 api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
-# Dictionary to store positions of multiple symbolss
+# Dictionary to store positions of multiple symbols
 current_positions = {}
 
 @app.get("/")
@@ -35,27 +35,33 @@ async def handle_webhook(request: Request):
 
         # Get current position for the specific symbol
         current_position = current_positions[symbol]
- 
-        # Check if the received action is different from the current position
-        if action not in ['buy', 'sell'] or (action == current_position):
-            return {"status": "ignored",
-                    "reason": f"Received {action} signal for {symbol} but already in {current_position} position."}
 
-        response = None
-        if action == "buy" and current_position == "Sell":  # Closing a short and opening a long
-            short_to_long(symbol, qty)
-            print('Closed a Short and Opened a Long')
-        elif action == "sell" and current_position == "Buy":  # Closing a long and opening a short
-            long_to_short(symbol, qty)
-            print('Closed a Long and Opened a Short')
-        elif action == "buy" and not current_position:  # No position, opening a long
-            open_position('Buy', symbol, qty)
-            print('Just opened a Long')
-        elif action == "sell" and not current_position:  # No position, opening a short
-            open_position('Sell', symbol, qty)
-            print('Just opened a Short')
+        if action not in ['buy', 'sell']:
+            return {"status": "ignored", "reason": f"Invalid action: {action}"}
 
-        return {"status": "success", "data": response}
+        if current_position is None:
+            if action == "sell":
+                open_position('Sell', symbol, qty)
+                print('Case 1: Opened a Short')
+            elif action == "buy":
+                open_position('Buy', symbol, qty)
+                print('Case 2: Opened a Long')
+        elif current_position == "Buy":
+            if action == "buy":
+                print('Case 3: Already in a Long, doing nothing')
+            elif action == "sell":
+                close_position(symbol, qty)
+                open_position('Sell', symbol, qty)
+                print('Case 4: Closed a Long and Opened a Short')
+        elif current_position == "Sell":
+            if action == "sell":
+                print('Case 5: Already in a Short, doing nothing')
+            elif action == "buy":
+                close_position(symbol, qty)
+                open_position('Buy', symbol, qty)
+                print('Case 6: Closed a Short and Opened a Long')
+
+        return {"status": "success", "data": "Position updated"}
 
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON format in the alert message")
@@ -67,30 +73,16 @@ def open_position(side, symbol, qty):
         category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
     current_positions[symbol] = side
 
-def short_to_long(symbol, qty):
-    session.place_order(
-        category="linear", symbol=symbol, side="buy", orderType="Market", qty=qty)
-
-    time.sleep(10)  # Increased timeout
-
-    session.place_order(
-        category="linear", symbol=symbol, side="buy", orderType="Market", qty=qty)
-
-    current_positions[symbol] = "Buy"  # Update the current position
-
-def long_to_short(symbol, qty):
-    # first closing with recude_only
-    session.place_order(
-        category="linear", symbol=symbol, side="buy",
-        orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
-
-    time.sleep(10)  # Increased timeout
-
-    # now just opening a new short pos.
-    session.place_order(
-        category="linear", symbol=symbol, side="sell", orderType="Market", qty=qty)
-
-    current_positions[symbol] = "Sell"  # Update the current position
+def close_position(symbol, qty):
+    current_position = current_positions[symbol]
+    if current_position == "Buy":
+        session.place_order(
+            category="linear", symbol=symbol, side="sell",
+            orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
+    elif current_position == "Sell":
+        session.place_order(
+            category="linear", symbol=symbol, side="buy",
+            orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
 
 
 if __name__ == "__main__":
