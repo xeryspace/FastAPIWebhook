@@ -51,17 +51,23 @@ async def handle_webhook(request: Request):
                 print('Case 3: Already in a Long, doing nothing')
             elif action == "sell":
                 close_position(symbol, qty)
-                time.sleep(10)  # Wait for 10 seconds before opening a new position
-                open_position('Sell', symbol, qty)
-                print('Case 4: Closed a Long and Opened a Short')
+                if current_positions[symbol] is None:
+                    time.sleep(10)  # Wait for 10 seconds before opening a new position
+                    open_position('Sell', symbol, qty)
+                    print('Case 4: Closed a Long and Opened a Short')
+                else:
+                    print('Error closing long position, skipping opening a short position')
         elif current_position == "Sell":
             if action == "sell":
                 print('Case 5: Already in a Short, doing nothing')
             elif action == "buy":
                 close_position(symbol, qty)
-                time.sleep(10)  # Wait for 10 seconds before opening a new position
-                open_position('Buy', symbol, qty)
-                print('Case 6: Closed a Short and Opened a Long')
+                if current_positions[symbol] is None:
+                    time.sleep(10)  # Wait for 10 seconds before opening a new position
+                    open_position('Buy', symbol, qty)
+                    print('Case 6: Closed a Short and Opened a Long')
+                else:
+                    print('Error closing short position, skipping opening a long position')
 
         return {"status": "success", "data": "Position updated"}
 
@@ -81,7 +87,7 @@ def close_position(symbol, qty):
         if current_position == "Buy":
             session.place_order(
                 category="linear", symbol=symbol, side="sell",
-                orderType="Market", qty=qty)
+                orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
         elif current_position == "Sell":
             session.place_order(
                 category="linear", symbol=symbol, side="buy",
