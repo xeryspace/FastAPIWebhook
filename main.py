@@ -36,21 +36,24 @@ async def handle_webhook(request: Request):
         # Get current position for the specific symbol
         current_position = current_positions[symbol]
 
+        # Check if the received action is different from the current position
+        if action not in ['buy', 'sell'] or (action == current_position):
+            return {"status": "ignored",
+                    "reason": f"Received {action} signal for {symbol} but already in {current_position} position."}
+
         response = None
-        if action == "buy":
-            if current_position == "Sell":  # Closing a short and opening a long
-                response = complete_position_change('Buy', symbol, qty)
-            elif not current_position:  # No position, opening a long
-                response = session.place_order(
-                    category="linear", symbol=symbol, side="Buy", orderType="Market", qty=qty)
-                current_positions[symbol] = "Buy"
-        elif action == "sell":
-            if current_position == "Buy":  # Closing a long and opening a short
-                response = complete_position_change('Sell', symbol, qty)
-            elif not current_position:  # No position, opening a short
-                response = session.place_order(
-                    category="linear", symbol=symbol, side="Sell", orderType="Market", qty=qty)
-                current_positions[symbol] = "Sell"
+        if action == "buy" and current_position == "Sell":  # Closing a short and opening a long
+            short_to_long(symbol, qty)
+            print('Closed a Short and Opened a Long')
+        elif action == "sell" and current_position == "Buy":  # Closing a long and opening a short
+            long_to_short(symbol, qty)
+            print('Closed a Long and Opened a Short')
+        elif action == "buy" and not current_position:  # No position, opening a long
+            open_position('Buy', symbol, qty)
+            print('Just opened a Long')
+        elif action == "sell" and not current_position:  # No position, opening a short
+            open_position('Sell', symbol, qty)
+            print('Just opened a Short')
 
         return {"status": "success", "data": response}
 
@@ -59,31 +62,35 @@ async def handle_webhook(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def open_position(side, symbol, qty):
+    session.place_order(
+        category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
+    current_positions[symbol] = side
 
-def complete_position_change(new_position, symbol, qty):
-    current_position = current_positions.get(symbol)
-    response = None
-    if current_position and ((new_position == 'Buy' and current_position == 'Sell') or
-                             (new_position == 'Sell' and current_position == 'Buy')):
-        # Close the current position
-        response = session.place_order(
-            category="linear", symbol=symbol, side=current_position,
-            orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
+def short_to_long(symbol, qty):
+    session.place_order(
+        category="linear", symbol=symbol, side="buy", orderType="Market", qty=qty)
 
-        # Wait until the order is filled
-        while True:
-            order_status = session.get_order_status(response['order_id'])
-            if order_status['status'] == 'Filled':
-                break
-            time.sleep(1)  # Adjust this delay as needed
+    time.sleep(10)  # Increased timeout
 
-    # Open a new position in the opposite direction
-    new_response = session.place_order(
-        category="linear", symbol=symbol, side=new_position,
-        orderType="Market", qty=qty)
+    session.place_order(
+        category="linear", symbol=symbol, side="buy", orderType="Market", qty=qty)
 
-    current_positions[symbol] = new_position
-    return {'close_response': response, 'new_position_response': new_response} if response else {'new_position_response': new_response}
+    current_positions[symbol] = "Buy"  # Update the current position
+
+def long_to_short(symbol, qty):
+    # first closing with recude_only
+    session.place_order(
+        category="linear", symbol=symbol, side="buy",
+        orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
+
+    time.sleep(10)  # Increased timeout
+
+    # now just opening a new short pos.
+    session.place_order(
+        category="linear", symbol=symbol, side="sell", orderType="Market", qty=qty)
+
+    current_positions[symbol] = "Sell"  # Update the current position
 
 
 if __name__ == "__main__":
