@@ -8,6 +8,12 @@ api_key = 'ULI4j96SQhGePVhxCu'
 api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
+@app.get("/")
+async def read_root():
+    return {
+        "name": "my-app",
+        "version": f"Hello world! From FastAPI running on Uvicorn. Using Python"
+    }
 
 @app.post("/webhook")
 async def handle_webhook(request: Request):
