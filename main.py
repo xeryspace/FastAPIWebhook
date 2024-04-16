@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
 import json
+import time
 
 app = FastAPI()
 
@@ -11,11 +12,9 @@ session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 # Dictionary to store positions of multiple symbols
 current_positions = {}
 
-
 @app.get("/")
 async def read_root():
     return {"name": "my-app", "version": "Hello world! From FastAPI running on Uvicorn."}
-
 
 @app.post("/webhook")
 async def handle_webhook(request: Request):
@@ -68,20 +67,30 @@ def complete_position_change(new_position, symbol, qty):
     current_position = current_positions.get(symbol)
     if current_position and ((new_position == 'Buy' and current_position == 'Sell') or
                              (new_position == 'Sell' and current_position == 'Buy')):
+        # Close the current position
         response = session.place_order(
-            category="linear", symbol=symbol, side=new_position,
+            category="linear", symbol=symbol, side=current_position,
             orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
+
+        # Wait until the order is filled
+        while True:
+            order_status = session.get_order_status(response['order_id'])
+            if order_status['status'] == 'Filled':
+                break
+            time.sleep(1)  # Adjust this delay as needed
+
+        # Open a new position in the opposite direction
+        new_response = session.place_order(
+            category="linear", symbol=symbol, side=new_position,
+            orderType="Market", qty=qty)
+
+        current_positions[symbol] = new_position
+        return {'close_response': response, 'new_position_response': new_response}
+
     else:
-        response = None
+        return None  # Ignore the signal if it's the same as the current position
 
-    new_response = session.place_order(
-        category="linear", symbol=symbol, side=new_position,
-        orderType="Market", qty=qty)
 
-    current_positions[symbol] = new_position
-    return {'close_response': response, 'new_position_response': new_response} if response else new_response
-
- 
 if __name__ == "__main__":
     import uvicorn
 
