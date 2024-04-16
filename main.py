@@ -78,13 +78,12 @@ def close_position(symbol, qty):
     if current_position == "Buy":
         session.place_order(
             category="linear", symbol=symbol, side="sell",
-            orderType="Market", qty=qty, close_on_trigger=True)
-        current_positions[symbol] = None
+            orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
     elif current_position == "Sell":
         session.place_order(
             category="linear", symbol=symbol, side="buy",
-            orderType="Market", qty=qty, close_on_trigger=True)
-        current_positions[symbol] = None
+            orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
+    current_positions[symbol] = None
 
 
 if __name__ == "__main__":
