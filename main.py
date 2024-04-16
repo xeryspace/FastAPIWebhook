@@ -35,7 +35,7 @@ async def handle_webhook(request: Request):
 
         # Get current position for the specific symbol
         current_position = current_positions[symbol]
-
+ 
         # Check if the received action is different from the current position
         if action not in ['buy', 'sell'] or (action == current_position):
             return {"status": "ignored",
