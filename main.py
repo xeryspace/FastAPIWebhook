@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
-from pydantic import BaseModel
 import json
 
 app = FastAPI()
@@ -10,20 +9,17 @@ api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
 
-class TradeOrder(BaseModel):
-    passphrase: str
-    message: str
-
-
 @app.post("/webhook")
-async def handle_webhook(order: TradeOrder):
-    if order.passphrase != "Armjansk12!!":
-        raise HTTPException(status_code=403, detail="Invalid passphrase")
-
+async def handle_webhook(request: Request):
     try:
-        alert_data = json.loads(order.message)
-        qty = alert_data.get("qty")
-        action = alert_data.get("action")
+        query_params = dict(request.query_params)
+        passphrase = query_params.get("passphrase", "")
+        if passphrase != "Armjansk12!!":
+            raise HTTPException(status_code=403, detail="Invalid passphrase")
+
+        body = await request.json()
+        qty = body.get("qty")
+        action = body.get("action")
 
         if action == "buy":
             response = session.place_order(
