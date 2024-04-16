@@ -50,7 +50,7 @@ async def handle_webhook(request: Request):
             if action == "buy":
                 print('Case 3: Already in a Long, doing nothing')
             elif action == "sell":
-                close_position(symbol, qty)
+                open_position('Sell', symbol, qty)
                 if current_positions[symbol] is None:
                     time.sleep(10)  # Wait for 10 seconds before opening a new position
                     open_position('Sell', symbol, qty)
@@ -61,7 +61,7 @@ async def handle_webhook(request: Request):
             if action == "sell":
                 print('Case 5: Already in a Short, doing nothing')
             elif action == "buy":
-                close_position(symbol, qty)
+                open_position('Buy', symbol, qty)
                 if current_positions[symbol] is None:
                     time.sleep(10)  # Wait for 10 seconds before opening a new position
                     open_position('Buy', symbol, qty)
