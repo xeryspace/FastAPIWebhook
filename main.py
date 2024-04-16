@@ -9,7 +9,7 @@ api_key = 'ULI4j96SQhGePVhxCu'
 api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
-# Dictionary to store positions of multiple symbols
+# Dictionary to store positions of multiple symbolss
 current_positions = {}
 
 @app.get("/")
