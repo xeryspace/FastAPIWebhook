@@ -50,7 +50,7 @@ async def handle_webhook(request: Request):
             if action == "buy":
                 print('Case 3: Already in a Long, doing nothing')
             elif action == "sell":
-                open_position('Sell', symbol, qty)
+                close_position('Sell', symbol, qty)
                 if current_positions[symbol] is None:
                     time.sleep(10)  # Wait for 10 seconds before opening a new position
                     open_position('Sell', symbol, qty)
@@ -61,7 +61,7 @@ async def handle_webhook(request: Request):
             if action == "sell":
                 print('Case 5: Already in a Short, doing nothing')
             elif action == "buy":
-                open_position('Buy', symbol, qty)
+                close_position('Buy', symbol, qty)
                 if current_positions[symbol] is None:
                     time.sleep(10)  # Wait for 10 seconds before opening a new position
                     open_position('Buy', symbol, qty)
@@ -81,21 +81,10 @@ def open_position(side, symbol, qty):
         category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
     current_positions[symbol] = side
 
-def close_position(symbol, qty):
-    try:
-        current_position = current_positions[symbol]
-        if current_position == "Buy":
-            session.place_order(
-                category="linear", symbol=symbol, side="sell",
-                orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
-        elif current_position == "Sell":
-            session.place_order(
-                category="linear", symbol=symbol, side="buy",
-                orderType="Market", qty=qty)
-    except Exception as e:
-        print(f"Error closing position: {str(e)}")
-    finally:
-        current_positions[symbol] = None
+def close_position(side, symbol, qty):
+    session.place_order(
+        category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
+    current_positions[symbol] = None
 
 
 if __name__ == "__main__":
