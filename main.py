@@ -14,10 +14,7 @@ current_positions = {}
 
 @app.get("/")
 async def read_root():
-    return {
-        "name": "my-app",
-        "version": "Hello world! From FastAPI running on Uvicorn."
-    }
+    return {"name": "my-app", "version": "Hello world! From FastAPI running on Uvicorn."}
 
 
 @app.post("/webhook")
@@ -37,7 +34,7 @@ async def handle_webhook(request: Request):
         if symbol not in current_positions:
             current_positions[symbol] = None
 
-        # Check current position for the specific symbol
+        # Get current position for the specific symbol
         current_position = current_positions[symbol]
 
         # Check if the received action is different from the current position
@@ -47,9 +44,9 @@ async def handle_webhook(request: Request):
 
         response = None
         if action == "buy" and current_position == "Sell":  # Closing a short and opening a long
-            complete_position_change('Buy', symbol, qty)
+            response = complete_position_change('Buy', symbol, qty)
         elif action == "sell" and current_position == "Buy":  # Closing a long and opening a short
-            complete_position_change('Sell', symbol, qty)
+            response = complete_position_change('Sell', symbol, qty)
         elif action == "buy" and not current_position:  # No position, opening a long
             response = session.place_order(
                 category="linear", symbol=symbol, side="Buy", orderType="Market", qty=qty)
@@ -68,15 +65,21 @@ async def handle_webhook(request: Request):
 
 
 def complete_position_change(new_position, symbol, qty):
-    # This function closes the current position and opens the opposite one
-    session.place_order(
-        category="linear", symbol=symbol, side=new_position,
-        orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
-    response = session.place_order(
+    current_position = current_positions.get(symbol)
+    if current_position and ((new_position == 'Buy' and current_position == 'Sell') or
+                             (new_position == 'Sell' and current_position == 'Buy')):
+        response = session.place_order(
+            category="linear", symbol=symbol, side=new_position,
+            orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
+    else:
+        response = None
+
+    new_response = session.place_order(
         category="linear", symbol=symbol, side=new_position,
         orderType="Market", qty=qty)
+
     current_positions[symbol] = new_position
-    return response
+    return {'close_response': response, 'new_position_response': new_response} if response else new_response
 
 
 if __name__ == "__main__":
