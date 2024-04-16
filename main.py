@@ -9,9 +9,6 @@ api_key = 'ULI4j96SQhGePVhxCu'
 api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
-# Dictionary to store positions of multiple symbols
-current_positions = {}
-
 @app.get("/")
 async def read_root():
     return {"name": "my-app", "version": "Hello world! From FastAPI running on Uvicorn."}
@@ -29,45 +26,40 @@ async def handle_webhook(request: Request):
         qty = body.get("qty")
         action = body.get("action")
 
-        # Initialize current_position for the symbol if it does not exist
-        if symbol not in current_positions:
-            current_positions[symbol] = None
-
-        # Get current position for the specific symbol
-        current_position = current_positions[symbol]
-
         if action not in ['buy', 'sell']:
             return {"status": "ignored", "reason": f"Invalid action: {action}"}
+
+        # Retrieve the current position for the symbol
+        position_info = session.get_positions(category="linear", symbol=symbol)
+        current_position = None
+        if position_info['result']['list']:
+            current_position = position_info['result']['list'][0]['side']
 
         if current_position is None:
             if action == "sell":
                 open_position('Sell', symbol, qty)
-                print('Case 1: Opened a Short')
+                print(f'Case 1: Opened a Short for {symbol}')
             elif action == "buy":
                 open_position('Buy', symbol, qty)
-                print('Case 2: Opened a Long')
+                print(f'Case 2: Opened a Long for {symbol}')
         elif current_position == "Buy":
             if action == "buy":
-                print('Case 3: Already in a Long, doing nothing')
+                print(f'Case 3: Already in a Long for {symbol}, doing nothing')
             elif action == "sell":
-                close_position('Sell', symbol, qty)
-                if current_positions[symbol] is None:
-                    time.sleep(10)  # Wait for 10 seconds before opening a new position
-                    open_position('Sell', symbol, qty)
-                    print('Case 4: Closed a Long and Opened a Short')
-                else:
-                    print('Error closing long position, skipping opening a short position')
+                close_position(symbol, qty)
+                print(f'Closed a Long for {symbol}')
+                time.sleep(10)  # Wait for 10 seconds before opening a new position
+                open_position('Sell', symbol, qty)
+                print(f'Case 4: Opened a Short for {symbol}')
         elif current_position == "Sell":
             if action == "sell":
-                print('Case 5: Already in a Short, doing nothing')
+                print(f'Case 5: Already in a Short for {symbol}, doing nothing')
             elif action == "buy":
-                close_position('Buy', symbol, qty)
-                if current_positions[symbol] is None:
-                    time.sleep(10)  # Wait for 10 seconds before opening a new position
-                    open_position('Buy', symbol, qty)
-                    print('Case 6: Closed a Short and Opened a Long')
-                else:
-                    print('Error closing short position, skipping opening a long position')
+                close_position(symbol, qty)
+                print(f'Closed a Short for {symbol}')
+                time.sleep(10)  # Wait for 10 seconds before opening a new position
+                open_position('Buy', symbol, qty)
+                print(f'Case 6: Opened a Long for {symbol}')
 
         return {"status": "success", "data": "Position updated"}
 
@@ -79,12 +71,15 @@ async def handle_webhook(request: Request):
 def open_position(side, symbol, qty):
     session.place_order(
         category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
-    current_positions[symbol] = side
+    print(f'Opened a {side} position for {symbol}')
 
-def close_position(side, symbol, qty):
-    session.place_order(
-        category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
-    current_positions[symbol] = None
+def close_position(symbol, qty):
+    position_info = session.get_positions(category="linear", symbol=symbol)
+    if position_info['result']['list']:
+        side = position_info['result']['list'][0]['side']
+        session.place_order(
+            category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
+        print(f'Closed a {side} position for {symbol}')
 
 
 if __name__ == "__main__":
