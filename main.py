@@ -81,11 +81,11 @@ def close_position(symbol, qty):
         if current_position == "Buy":
             session.place_order(
                 category="linear", symbol=symbol, side="sell",
-                orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
+                orderType="Market", qty=qty)
         elif current_position == "Sell":
             session.place_order(
                 category="linear", symbol=symbol, side="buy",
-                orderType="Market", qty=qty, reduce_only=True, close_on_trigger=True)
+                orderType="Market", qty=qty
     except Exception as e:
         print(f"Error closing position: {str(e)}")
     finally:
