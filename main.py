@@ -8,15 +8,19 @@ api_key = 'ULI4j96SQhGePVhxCu'
 api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
+current_position = None
+
 @app.get("/")
 async def read_root():
     return {
         "name": "my-app",
-        "version": f"Hello world! From FastAPI running on Uvicorn. Using Python"
+        "version": "Hello world! From FastAPI running on Uvicorn."
     }
 
 @app.post("/webhook")
 async def handle_webhook(request: Request):
+    global current_position
+
     try:
         query_params = dict(request.query_params)
         passphrase = query_params.get("passphrase", "")
@@ -27,7 +31,49 @@ async def handle_webhook(request: Request):
         qty = body.get("qty")
         action = body.get("action")
 
-        if action == "buy":
+        # Check if the received action is different from the current position
+        if action not in ['buy', 'sell'] or (action == current_position):
+            # If the action is the same as the current position, ignore it
+            return {"status": "ignored", "reason": f"Received {action} signal but already in {current_position} position."}
+
+        response = None
+        if action == "buy" and current_position == "Sell":  # Closing a short and opening a long
+            session.place_order(
+                category="linear",
+                symbol="DEGENUSDT",
+                side="Buy",
+                orderType="Market",
+                qty=qty,
+                reduce_only=True,
+                close_on_trigger=True,
+            )
+            response = session.place_order(  # Open new long position
+                category="linear",
+                symbol="DEGENUSDT",
+                side="Buy",
+                orderType="Market",
+                qty=qty,
+            )
+            current_position = "Buy"
+        elif action == "sell" and current_position == "Buy":  # Closing a long and opening a short
+            session.place_order(
+                category="linear",
+                symbol="DEGENUSDT",
+                side="Sell",
+                orderType="Market",
+                qty=qty,
+                reduce_only=True,
+                close_on_trigger=True,
+            )
+            response = session.place_order(  # Open new short position
+                category="linear",
+                symbol="DEGENUSDT",
+                side="Sell",
+                orderType="Market",
+                qty=qty,
+            )
+            current_position = "Sell"
+        elif action == "buy" and not current_position:  # No position, opening a long
             response = session.place_order(
                 category="linear",
                 symbol="DEGENUSDT",
@@ -35,18 +81,16 @@ async def handle_webhook(request: Request):
                 orderType="Market",
                 qty=qty,
             )
-        elif action == "sell":
+            current_position = "Buy"
+        elif action == "sell" and not current_position:  # No position, opening a short
             response = session.place_order(
                 category="linear",
                 symbol="DEGENUSDT",
                 side="Sell",
                 orderType="Market",
                 qty=qty,
-                reduce_only=True,
-                close_on_trigger=False,
             )
-        else:
-            raise HTTPException(status_code=400, detail="Action must be 'buy' or 'sell'")
+            current_position = "Sell"
 
         return {"status": "success", "data": response}
 
@@ -55,8 +99,6 @@ async def handle_webhook(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
