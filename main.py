@@ -81,7 +81,7 @@ def complete_position_change(new_position, symbol, qty):
     current_positions[symbol] = new_position
     return {'close_response': response, 'new_position_response': new_response} if response else new_response
 
-
+ 
 if __name__ == "__main__":
     import uvicorn
 
