@@ -10,7 +10,7 @@ api_key = 'ULI4j96SQhGePVhxCu'
 api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
-symbols_to_check = ["OGUSDT", "VETUSDT", "WIFUSDT", "ONGUSDT", "DEGENUSDT"]
+symbols_to_check = ["PERPUSDT", "VETUSDT", "WIFUSDT", "ONGUSDT", "DEGENUSDT"]
 
 async def check_positions():
     while True:
