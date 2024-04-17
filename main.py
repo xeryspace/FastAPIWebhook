@@ -84,30 +84,6 @@ async def handle_webhook(request: Request):
         logger.error(f"Error in handle_webhook: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-async def process_signal(symbol, qty, action, entry_price):
-    try:
-        # Retrieve the current position for the symbol
-        position_info = session.get_positions(category="linear", symbol=symbol)
-        current_position = None
-        if position_info['result']['list']:
-            current_position = position_info['result']['list'][0]['side']
-        if current_position is None or current_position == "":
-            if action == "sell":
-                open_position('Sell', symbol, qty)
-            elif action == "buy":
-                open_position('Buy', symbol, qty)
-        elif current_position == "Buy":
-            if action == "sell":
-                close_position(symbol, qty)
-                open_position('Sell', symbol, qty)
-        elif current_position == "Sell":
-            if action == "buy":
-                close_position(symbol, qty)
-                open_position('Buy', symbol, qty)
-    except Exception as e:
-        logger.error(f"Error in process_signal: {str(e)}")
-        raise
-
 def get_current_price(symbol):
     try:
         ticker = session.get_tickers(category="linear", symbol=symbol)
@@ -139,6 +115,36 @@ def close_position(symbol, qty):
         logger.error(f"Error in close_position: {str(e)}")
         raise
 
+async def process_signal(symbol, qty, action, entry_price):
+    try:
+        # Retrieve the current position for the symbol
+        position_info = session.get_positions(category="linear", symbol=symbol)
+        current_position = None
+        if position_info['result']['list']:
+            current_position = position_info['result']['list'][0]['side']
+        logger.info(f"Current position for {symbol}: {current_position}")
+
+        if current_position is None or current_position == "":
+            if action == "sell":
+                logger.info(f"Opening new Sell position for {symbol}")
+                open_position('Sell', symbol, qty)
+            elif action == "buy":
+                logger.info(f"Opening new Buy position for {symbol}")
+                open_position('Buy', symbol, qty)
+        elif current_position == "Buy":
+            if action == "sell":
+                logger.info(f"Closing Buy position and opening Sell position for {symbol}")
+                close_position(symbol, qty)
+                open_position('Sell', symbol, qty)
+        elif current_position == "Sell":
+            if action == "buy":
+                logger.info(f"Closing Sell position and opening Buy position for {symbol}")
+                close_position(symbol, qty)
+                open_position('Buy', symbol, qty)
+    except Exception as e:
+        logger.error(f"Error in process_signal: {str(e)}")
+        raise
+
 def check_positions():
     symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT', '1000PEPEUSDT']  # Add the symbols you want to check positions for
     while True:
@@ -160,15 +166,17 @@ def check_positions():
                     else:
                         continue
                     if unrealised_pnl >= 2:
-                        logger.info(f"Closing the entire position for {symbol} ( Profit )")
+                        logger.info(f"Closing the entire position for {symbol} (Profit)")
                         close_position(symbol, size)
                     elif unrealised_pnl <= -1.5:
-                        logger.info(f"Closing the entire position for {symbol} ( Loss )")
+                        logger.info(f"Closing the entire position for {symbol} (Loss)")
                         close_position(symbol, size)
                 else:
+                    logger.info(f"No positions found for {symbol}")
                     continue
 
         except Exception as e:
+            logger.error(f"Error in check_positions: {str(e)}")
             continue
 
 @app.on_event("startup")
