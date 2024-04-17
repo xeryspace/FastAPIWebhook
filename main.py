@@ -46,17 +46,29 @@ async def handle_webhook(request: Request):
         candle_time = current_time.replace(second=0, microsecond=0)
         next_candle_time = candle_time + timedelta(minutes=(3 - candle_time.minute % 3))
         seconds_remaining = (next_candle_time - current_time).total_seconds()
-        print(seconds_remaining)
-        if seconds_remaining <= 20:
+        if seconds_remaining <= 25:
             await process_signal(symbol, qty, action, entry_price)
         else:
-            await asyncio.sleep(20)
+            await asyncio.sleep(25)
             current_price = get_current_price(symbol)
-
-            if action == 'buy' and current_price <= entry_price:
+            if action == 'buy' and current_price >= entry_price:
+                logger.info(f"Buy Action, Current Price: {current_price}, Entry Price: {entry_price}")
                 await process_signal(symbol, qty, action, entry_price)
-            elif action == 'sell' and current_price >= entry_price:
+                await asyncio.sleep(30)
+                logger.info(f"Waited another 30 sec, Current Price: {current_price}, Entry Price: {entry_price}")
+                logger.info(f"Current Price should be Higher then Entry, since we are Longing")
+                if current_price < entry_price:
+                    await close_position(symbol, qty)
+                    logger.info(f"Should have closed the Long Position")
+            elif action == 'sell' and current_price <= entry_price:
+                logger.info(f"Sell Action, Current Price: {current_price}, Entry Price: {entry_price}")
                 await process_signal(symbol, qty, action, entry_price)
+                await asyncio.sleep(30)
+                logger.info(f"Waited another 30 sec, Current Price: {current_price}, Entry Price: {entry_price}")
+                logger.info(f"Current Price should be Smaller then Entry, since we are Shorting")
+                if current_price > entry_price:
+                    await close_position(symbol, qty)
+                    logger.info(f"Should have closed the Short Position")
             else:
                 logger.info(f"Price condition not met after 15 seconds for {symbol}. Signal ignored.")
 
@@ -76,52 +88,19 @@ async def process_signal(symbol, qty, action, entry_price):
         current_position = None
         if position_info['result']['list']:
             current_position = position_info['result']['list'][0]['side']
-            logger.info(f"Current position for {symbol}: {current_position}")
-        else:
-            logger.info(f"No current position for {symbol}")
-
         if current_position is None or current_position == "":
             if action == "sell":
                 open_position('Sell', symbol, qty)
-                logger.info(f'Case 1: Opened a Short for {symbol}')
             elif action == "buy":
                 open_position('Buy', symbol, qty)
-                logger.info(f'Case 2: Opened a Long for {symbol}')
         elif current_position == "Buy":
-            if action == "buy":
-                logger.info(f'Case 3: Already in a Long for {symbol}, doing nothing')
-            elif action == "sell":
-                close_position(symbol, qty)
-                logger.info(f'Closed a Long for {symbol}')
-                open_position('Sell', symbol, qty)
-                logger.info(f'Case 4: Opened a Short for {symbol}')
-        elif current_position == "Sell":
             if action == "sell":
-                logger.info(f'Case 5: Already in a Short for {symbol}, doing nothing')
-            elif action == "buy":
                 close_position(symbol, qty)
-                logger.info(f'Closed a Short for {symbol}')
+                open_position('Sell', symbol, qty)
+        elif current_position == "Sell":
+            if action == "buy":
+                close_position(symbol, qty)
                 open_position('Buy', symbol, qty)
-                logger.info(f'Case 6: Opened a Long for {symbol}')
-
-        # Calculate the time to wait until 5 seconds after the candle closes
-        current_time = datetime.now()
-        candle_time = current_time.replace(second=0, microsecond=0)
-        next_candle_time = candle_time + timedelta(minutes=(3 - candle_time.minute % 3))
-        time_to_wait = (next_candle_time - current_time).total_seconds() + 5
-
-        # Wait until 5 seconds after the candle closes
-        await asyncio.sleep(time_to_wait)
-
-        # Check the price again after the candle closes
-        current_price = get_current_price(symbol)
-        if action == 'buy' and current_price < entry_price:
-            logger.info(f"Price is below entry price after candle close for {symbol}. Closing position.")
-            close_position(symbol, qty)
-        elif action == 'sell' and current_price > entry_price:
-            logger.info(f"Price is above entry price after candle close for {symbol}. Closing position.")
-            close_position(symbol, qty)
-
     except Exception as e:
         logger.error(f"Error in process_signal: {str(e)}")
         raise
@@ -131,10 +110,8 @@ def get_current_price(symbol):
         ticker = session.get_tickers(category="linear", symbol=symbol)
         if ticker['result']:
             last_price = float(ticker['result']['list'][0]['lastPrice'])
-            logger.info(f"Retrieved current price for {symbol}: {last_price}")
             return last_price
         else:
-            logger.error(f"Empty result from get_tickers for {symbol}")
             raise Exception(f"Failed to retrieve current price for {symbol}")
     except Exception as e:
         logger.error(f"Error in get_current_price: {str(e)}")
@@ -144,7 +121,6 @@ def open_position(side, symbol, qty):
     try:
         session.place_order(
             category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
-        logger.info(f'Opened a {side} position for {symbol}')
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
         raise
@@ -156,7 +132,6 @@ def close_position(symbol, qty):
             side = "Buy" if position_info['result']['list'][0]['side'] == "Sell" else "Sell"
             session.place_order(
                 category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
-            logger.info(f'Closed a {position_info["result"]["list"][0]["side"]} position for {symbol}')
     except Exception as e:
         logger.error(f"Error in close_position: {str(e)}")
         raise
@@ -165,7 +140,6 @@ def check_positions():
     symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT', '1000PEPEUSDT']  # Add the symbols you want to check positions for
     while True:
         try:
-            logger.info("#####################")
             for symbol in symbols:
                 time.sleep(2)
                 positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
@@ -176,33 +150,27 @@ def check_positions():
                     position_idx = position['positionIdx']
 
                     if 'unrealisedPnl' not in position or position['unrealisedPnl'] == '':
-                        logger.warning(f"Unrealised PnL not found or empty for position {position_idx} of symbol {symbol}")
                         continue
 
                     unrealised_pnl = float(position['unrealisedPnl'])
                     unrealised_pnl_rounded = round(unrealised_pnl, 2)
-                    logger.info(f"Unrealised PnL for {symbol}: ${unrealised_pnl_rounded}")
 
                     if 'size' in position and position['size'] != '':
                         size = float(position['size'])
                     else:
-                        logger.warning(f"Size not found or empty for position of symbol {symbol}")
                         continue
                     if unrealised_pnl >= 1.5:
-                        logger.info(f"Position meets the criteria for taking profit")
-                        logger.info(f"Closing the entire position for {symbol}")
+                        logger.info(f"Closing the entire position for {symbol} ( Profit )")
                         close_position(symbol, size)
                     elif unrealised_pnl <= -1.5:
-                        logger.info(f"Position meets the criteria for stopping loss")
-                        logger.info(f"Closing the entire position for {symbol}")
+                        logger.info(f"Closing the entire position for {symbol} ( Loss )")
                         close_position(symbol, size)
                 else:
-                    logger.info(f"No positions found for symbol {symbol}")
-
+                    continue
             time.sleep(2)  # Delay for 5 seconds before the next iteration
 
         except Exception as e:
-            logger.error(f"Error while checking positions: {str(e)}")
+            continue
 
 @app.on_event("startup")
 async def startup_event():
