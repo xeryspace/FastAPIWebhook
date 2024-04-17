@@ -89,7 +89,7 @@ def close_position(symbol, qty):
 async def check_positions():
     while True:
         try:
-            symbols = ['FETUSDT']  # Add the symbols you want to check positions for
+            symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT']
             for symbol in symbols:
                 positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
 
@@ -135,7 +135,7 @@ async def check_positions():
         except Exception as e:
             print(f"Error while checking positions: {str(e)}")
 
-        await asyncio.sleep(15)
+        await asyncio.sleep(30)
 def update_stop_loss(symbol, stop_loss):
     session.set_trading_stop(
         category="linear",
