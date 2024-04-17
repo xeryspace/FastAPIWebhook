@@ -121,7 +121,7 @@ async def check_positions():
                         print(f"Entry price and average price not found for position {position_idx} of symbol {symbol}")
                         continue
 
-                    if unrealised_pnl > 1.0 and position_idx not in processed_positions:
+                    if unrealised_pnl > 3.0 and position_idx not in processed_positions:
                         print(f"Position meets the criteria for taking profit")
                         qty_to_close = size * 0.5
                         print(f"Closing {qty_to_close} units of position {position_idx}")
