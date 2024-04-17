@@ -87,9 +87,9 @@ def close_position(symbol, qty):
         print(f'Closed a {position_info["result"]["list"][0]["side"]} position for {symbol}')
 
 async def check_positions():
+    symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT']  # Add the symbols you want to check positions for
     while True:
         try:
-            symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT']
             for symbol in symbols:
                 positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
 
@@ -97,24 +97,25 @@ async def check_positions():
                     symbol = position['symbol']
                     position_idx = position['positionIdx']
 
-                    if 'unrealisedPnl' in position:
+                    if 'unrealisedPnl' in position and position['unrealisedPnl'] != '':
                         unrealised_pnl = float(position['unrealisedPnl'])
                         unrealised_pnl_rounded = round(unrealised_pnl, 2)
                         print(f"Unrealised PnL for {symbol}: ${unrealised_pnl_rounded}")
                     else:
-                        print(f"Unrealised PnL not found for position {position_idx} of symbol {symbol}")
+                        print(f"Unrealised PnL not found or empty for position {position_idx} of symbol {symbol}")
                         continue
 
-                    if 'size' in position:
+                    if 'size' in position and position['size'] != '':
                         size = float(position['size'])
                         print(f"Size for position: {size}")
                     else:
-                        print(f"Size not found for position of symbol {symbol}")
+                        print(f"Size not found or empty for position of symbol {symbol}")
                         continue
 
-                    if 'avgPrice' in position:
+                    if 'avgPrice' in position and position['avgPrice'] != '':
                         avgPrice = float(position['avgPrice'])
                     else:
+                        print(f"Average price not found or empty for position {position_idx} of symbol {symbol}")
                         continue
 
                     if unrealised_pnl > 3.0 and position_idx not in processed_positions:
@@ -135,7 +136,8 @@ async def check_positions():
         except Exception as e:
             print(f"Error while checking positions: {str(e)}")
 
-        await asyncio.sleep(30)
+        await asyncio.sleep(15)
+        
 def update_stop_loss(symbol, stop_loss):
     session.set_trading_stop(
         category="linear",
