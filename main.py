@@ -64,7 +64,8 @@ async def handle_webhook(request: Request):
                 await asyncio.sleep(to_check)
                 logger.info(f"Waited another {to_check} sec, Current Price: {current_price}, Entry Price: {entry_price}")
                 logger.info(f"Current Price should be Higher then Entry, since we are Longing")
-                if current_price < entry_price:
+                position_exists = await check_position_exists(symbol)
+                if current_price < entry_price and position_exists:
                     await close_position(symbol, qty)
                     logger.info(f"Should have closed the Long Position")
             elif action == 'sell' and current_price <= entry_price:
@@ -73,7 +74,8 @@ async def handle_webhook(request: Request):
                 await asyncio.sleep(to_check)
                 logger.info(f"Waited another {to_check} sec, Current Price: {current_price}, Entry Price: {entry_price}")
                 logger.info(f"Current Price should be Smaller then Entry, since we are Shorting")
-                if current_price > entry_price:
+                position_exists = await check_position_exists(symbol)
+                if current_price > entry_price and position_exists:
                     await close_position(symbol, qty)
                     logger.info(f"Should have closed the Short Position")
             else:
@@ -89,6 +91,17 @@ async def handle_webhook(request: Request):
     except Exception as e:
         logger.error(f"Error in handle_webhook: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+async def check_position_exists(symbol):
+    try:
+        position_info = session.get_positions(category="linear", symbol=symbol)
+        if position_info['result']['list']:
+            return True
+        else:
+            return False
+    except Exception as e:
+        logger.error(f"Error in check_position_exists: {str(e)}")
+        raise
 
 def get_current_price(symbol):
     try:
