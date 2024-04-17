@@ -1,4 +1,4 @@
-import asyncio
+import time
 import json
 from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
@@ -86,9 +86,10 @@ def close_position(symbol, qty):
             category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
         print(f'Closed a {position_info["result"]["list"][0]["side"]} position for {symbol}')
 
-async def check_positions():
+def check_positions():
     symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT']  # Add the symbols you want to check positions for
     while True:
+        print("__________________________________")
         try:
             for symbol in symbols:
                 positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
@@ -135,9 +136,9 @@ async def check_positions():
 
         except Exception as e:
             print(f"Error while checking positions: {str(e)}")
+        print("__________________________________")
+        time.sleep(15)
 
-        await asyncio.sleep(15)
-        
 def update_stop_loss(symbol, stop_loss):
     session.set_trading_stop(
         category="linear",
@@ -148,7 +149,8 @@ def update_stop_loss(symbol, stop_loss):
 
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(check_positions())
+    import threading
+    threading.Thread(target=check_positions).start()
 
 if __name__ == "__main__":
     import uvicorn
