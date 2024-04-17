@@ -103,6 +103,25 @@ async def process_signal(symbol, qty, action, entry_price):
                 logger.info(f'Closed a Short for {symbol}')
                 open_position('Buy', symbol, qty)
                 logger.info(f'Case 6: Opened a Long for {symbol}')
+
+        # Calculate the time to wait until 5 seconds after the candle closes
+        current_time = datetime.now()
+        candle_time = current_time.replace(second=0, microsecond=0)
+        next_candle_time = candle_time + timedelta(minutes=(3 - candle_time.minute % 3))
+        time_to_wait = (next_candle_time - current_time).total_seconds() + 5
+
+        # Wait until 5 seconds after the candle closes
+        await asyncio.sleep(time_to_wait)
+
+        # Check the price again after the candle closes
+        current_price = get_current_price(symbol)
+        if action == 'buy' and current_price > entry_price:
+            logger.info(f"Price is above entry price after candle close for {symbol}. Closing position.")
+            close_position(symbol, qty)
+        elif action == 'sell' and current_price < entry_price:
+            logger.info(f"Price is below entry price after candle close for {symbol}. Closing position.")
+            close_position(symbol, qty)
+
     except Exception as e:
         logger.error(f"Error in process_signal: {str(e)}")
         raise
