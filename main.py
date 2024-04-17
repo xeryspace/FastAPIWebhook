@@ -19,8 +19,8 @@ async def check_positions():
             if position_info['result']['list']:
                 position = position_info['result']['list'][0]
                 side = position['side']
-                unrealised_pnl = float(position['unrealisedPnl'])
-                position_value = float(position['positionValue'])
+                unrealised_pnl = float(position['unrealisedPnl']) if position['unrealisedPnl'] else 0
+                position_value = float(position['positionValue']) if position['positionValue'] else 0
 
                 if position_value != 0:
                     unrealised_pnl_pcnt = (unrealised_pnl / position_value) * 100
@@ -33,7 +33,7 @@ async def check_positions():
                 else:
                     print(f"Open Position for {symbol} / Side: {side} / Current PNL: 0%")
 
-        await asyncio.sleep(30) 
+        await asyncio.sleep(30)  # Check positions every 30 seconds
 
 @app.on_event("startup")
 async def startup_event():
