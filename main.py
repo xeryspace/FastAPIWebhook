@@ -54,7 +54,7 @@ async def handle_webhook(request: Request):
         if seconds_remaining <= 15:
             await process_signal(symbol, qty, action, entry_price)
         else:
-            await asyncio.sleep(15)
+            await asyncio.sleep(25)
             current_price = get_current_price(symbol)
             tolerance_percentage = 0.001  # 0.1% tolerance
             if action == 'buy' and current_price >= entry_price * (1 - tolerance_percentage):
