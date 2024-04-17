@@ -56,10 +56,11 @@ async def handle_webhook(request: Request):
         else:
             await asyncio.sleep(15)
             current_price = get_current_price(symbol)
-            if action == 'buy' and current_price >= entry_price:
+            tolerance_percentage = 0.001  # 0.1% tolerance
+            if action == 'buy' and current_price >= entry_price * (1 - tolerance_percentage):
                 logger.info(f"Buy Action, Current Price: {current_price}, Entry Price: {entry_price}")
                 await process_signal(symbol, qty, action, entry_price)
-            elif action == 'sell' and current_price <= entry_price:
+            elif action == 'sell' and current_price <= entry_price * (1 + tolerance_percentage):
                 logger.info(f"Sell Action, Current Price: {current_price}, Entry Price: {entry_price}")
                 await process_signal(symbol, qty, action, entry_price)
             else:

@@ -32,10 +32,10 @@ def check_positions():
                     else:
                         continue
 
-                    if unrealised_pnl >= 0.01:
+                    if unrealised_pnl >= 2.0:
                         logger.info(f"Closing the entire position for {symbol} (Profit)")
                         close_position(symbol, size)
-                    elif unrealised_pnl <= -0.02:
+                    elif unrealised_pnl <= -2.0:
                         logger.info(f"Closing the entire position for {symbol} (Loss)")
                         close_position(symbol, size)
                 else:
