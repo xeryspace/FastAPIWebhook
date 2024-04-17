@@ -110,7 +110,6 @@ def check_positions():
 
                     if 'size' in position and position['size'] != '':
                         size = float(position['size'])
-                        print(f"Size for position: {size}")
                     else:
                         print(f"Size not found or empty for position of symbol {symbol}")
                         continue
