@@ -195,6 +195,7 @@ def check_positions():
         except Exception as e:
             logger.error(f"Error in check_positions: {str(e)}")
             continue
+        time.sleep(5)
 
 @app.on_event("startup")
 async def startup_event():
