@@ -22,20 +22,17 @@ async def check_positions():
                     unrealised_pnl = float(position['unrealisedPnl']) if position['unrealisedPnl'] else 0
                     position_value = float(position['positionValue']) if position['positionValue'] else 0
 
-                    if position_value != 0:
-                        unrealised_pnl_pcnt = (unrealised_pnl / position_value) * 100
+                    if side and unrealised_pnl != 0:
+                        unrealised_pnl_pcnt = (unrealised_pnl / position_value) * 100 if position_value != 0 else 0
                         print(f"Open Position for {symbol} / Side: {side} / Current PNL: {unrealised_pnl_pcnt:.2f}%")
 
                         if unrealised_pnl_pcnt >= 10:
                             qty = position['size']
                             close_position(symbol, qty)
                             print(f'Closed a {side} position for {symbol} with {unrealised_pnl_pcnt:.2f}% unrealized profit')
-                    else:
-                        print(f"Open Position for {symbol} / Side: {side} / Current PNL: 0%")
-        print(f"------ Waiting 30 seconds ------")
-        print(f"------ Waiting 30 seconds ------")
-        print(f"------ Waiting 30 seconds ------")
-        await asyncio.sleep(30)  # Check positions every 30 seconds
+
+        print(f"------ Waiting 10 seconds ------")
+        await asyncio.sleep(10)  # Check positions every 30 seconds
 
 @app.on_event("startup")
 async def startup_event():
