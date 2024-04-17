@@ -141,7 +141,6 @@ def check_positions():
     while True:
         try:
             for symbol in symbols:
-                time.sleep(2)
                 positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
 
                 if positions:
@@ -167,7 +166,6 @@ def check_positions():
                         close_position(symbol, size)
                 else:
                     continue
-            time.sleep(2)  # Delay for 5 seconds before the next iteration
 
         except Exception as e:
             continue
