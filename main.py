@@ -115,11 +115,11 @@ async def process_signal(symbol, qty, action, entry_price):
 
         # Check the price again after the candle closes
         current_price = get_current_price(symbol)
-        if action == 'buy' and current_price > entry_price:
-            logger.info(f"Price is above entry price after candle close for {symbol}. Closing position.")
-            close_position(symbol, qty)
-        elif action == 'sell' and current_price < entry_price:
+        if action == 'buy' and current_price < entry_price:
             logger.info(f"Price is below entry price after candle close for {symbol}. Closing position.")
+            close_position(symbol, qty)
+        elif action == 'sell' and current_price > entry_price:
+            logger.info(f"Price is above entry price after candle close for {symbol}. Closing position.")
             close_position(symbol, qty)
 
     except Exception as e:
