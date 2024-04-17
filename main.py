@@ -12,8 +12,6 @@ api_key = 'ULI4j96SQhGePVhxCu'
 api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
-processed_positions = set()
-
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -171,21 +169,14 @@ def check_positions():
                     else:
                         logger.warning(f"Size not found or empty for position of symbol {symbol}")
                         continue
-
-                    if unrealised_pnl >= 1.5 and position_idx not in processed_positions:
+                    if unrealised_pnl >= 1.5:
                         logger.info(f"Position meets the criteria for taking profit")
                         logger.info(f"Closing the entire position for {symbol}")
                         close_position(symbol, size)
-
-                        processed_positions.add(position_idx)
-                        logger.info(f"Added position to the processed set")
-                    elif unrealised_pnl <= -1.5 and position_idx not in processed_positions:
+                    elif unrealised_pnl <= -1.5:
                         logger.info(f"Position meets the criteria for stopping loss")
                         logger.info(f"Closing the entire position for {symbol}")
                         close_position(symbol, size)
-
-                        processed_positions.add(position_idx)
-                        logger.info(f"Added position to the processed set")
                 else:
                     logger.info(f"No positions found for symbol {symbol}")
 
