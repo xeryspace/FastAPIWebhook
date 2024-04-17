@@ -10,38 +10,6 @@ api_key = 'ULI4j96SQhGePVhxCu'
 api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
-symbols_to_check = ["PERPUSDT", "VETUSDT", "WIFUSDT", "ONGUSDT", "DEGENUSDT"]
-
-async def check_positions():
-    while True:
-        processed_symbols = set()
-        for symbol in symbols_to_check:
-            if symbol not in processed_symbols:
-                position_info = session.get_positions(category="linear", symbol=symbol)
-                if position_info['result']['list']:
-                    for position in position_info['result']['list']:
-                        side = position['side']
-                        unrealised_pnl = float(position['unrealisedPnl']) if position['unrealisedPnl'] else 0
-                        position_value = float(position['positionValue']) if position['positionValue'] else 0
-
-                        if side and unrealised_pnl != 0 and position_value != 0:
-                            unrealised_pnl_pcnt = (unrealised_pnl / position_value) * 100
-                            print(f"Open Position for {symbol} / Side: {side} / Current PNL: {unrealised_pnl_pcnt:.2f}%")
-                            processed_symbols.add(symbol)
-
-                            if unrealised_pnl_pcnt >= 10:
-                                qty = position['size']
-                                close_position(symbol, qty)
-                                print(f'Closed a {side} position for {symbol} with {unrealised_pnl_pcnt:.2f}% unrealized profit')
-                                break
-
-        print(f"------ Waiting 15 seconds ------")
-        await asyncio.sleep(15)  # Check positions every 30 seconds
-
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(check_positions())
-
 @app.get("/")
 async def read_root():
     return {"name": "my-app", "version": "Hello world! From FastAPI running on Uvicorn."}
