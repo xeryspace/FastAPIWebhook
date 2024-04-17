@@ -17,22 +17,24 @@ async def check_positions():
         for symbol in symbols_to_check:
             position_info = session.get_positions(category="linear", symbol=symbol)
             if position_info['result']['list']:
-                position = position_info['result']['list'][0]
-                side = position['side']
-                unrealised_pnl = float(position['unrealisedPnl']) if position['unrealisedPnl'] else 0
-                position_value = float(position['positionValue']) if position['positionValue'] else 0
+                for position in position_info['result']['list']:
+                    side = position['side']
+                    unrealised_pnl = float(position['unrealisedPnl']) if position['unrealisedPnl'] else 0
+                    position_value = float(position['positionValue']) if position['positionValue'] else 0
 
-                if position_value != 0:
-                    unrealised_pnl_pcnt = (unrealised_pnl / position_value) * 100
-                    print(f"Open Position for {symbol} / Side: {side} / Current PNL: {unrealised_pnl_pcnt:.2f}%")
+                    if position_value != 0:
+                        unrealised_pnl_pcnt = (unrealised_pnl / position_value) * 100
+                        print(f"Open Position for {symbol} / Side: {side} / Current PNL: {unrealised_pnl_pcnt:.2f}%")
 
-                    if unrealised_pnl_pcnt >= 10:
-                        qty = position['size']
-                        close_position(symbol, qty)
-                        print(f'Closed a {side} position for {symbol} with {unrealised_pnl_pcnt:.2f}% unrealized profit')
-                else:
-                    print(f"Open Position for {symbol} / Side: {side} / Current PNL: 0%")
-
+                        if unrealised_pnl_pcnt >= 10:
+                            qty = position['size']
+                            close_position(symbol, qty)
+                            print(f'Closed a {side} position for {symbol} with {unrealised_pnl_pcnt:.2f}% unrealized profit')
+                    else:
+                        print(f"Open Position for {symbol} / Side: {side} / Current PNL: 0%")
+        print(f"------ Waiting 30 seconds ------")
+        print(f"------ Waiting 30 seconds ------")
+        print(f"------ Waiting 30 seconds ------")
         await asyncio.sleep(30)  # Check positions every 30 seconds
 
 @app.on_event("startup")
