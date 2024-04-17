@@ -133,11 +133,11 @@ def check_positions():
                         print(f"Added position to the processed set")
                     else:
                         continue
-
+                time.sleep(5)
         except Exception as e:
             print(f"Error while checking positions: {str(e)}")
         print("__________________________________")
-        time.sleep(15)
+        time.sleep(5)
 
 def update_stop_loss(symbol, stop_loss):
     session.set_trading_stop(
