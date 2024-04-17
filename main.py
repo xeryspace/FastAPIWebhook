@@ -149,19 +149,17 @@ def check_positions():
                 if positions:
                     position = positions[0]  # Get the first position for the symbol
                     symbol = position['symbol']
-                    position_idx = position['positionIdx']
 
                     if 'unrealisedPnl' not in position or position['unrealisedPnl'] == '':
                         continue
 
                     unrealised_pnl = float(position['unrealisedPnl'])
-                    unrealised_pnl_rounded = round(unrealised_pnl, 2)
 
                     if 'size' in position and position['size'] != '':
                         size = float(position['size'])
                     else:
                         continue
-                    if unrealised_pnl >= 1.5:
+                    if unrealised_pnl >= 2:
                         logger.info(f"Closing the entire position for {symbol} ( Profit )")
                         close_position(symbol, size)
                     elif unrealised_pnl <= -1.5:
