@@ -53,7 +53,6 @@ async def handle_webhook(request: Request):
             elif action == "sell":
                 close_position(symbol, qty)
                 print(f'Closed a Long for {symbol}')
-                time.sleep(10)  # Wait for 10 seconds before opening a new position
                 open_position('Sell', symbol, qty)
                 print(f'Case 4: Opened a Short for {symbol}')
         elif current_position == "Sell":
@@ -62,7 +61,6 @@ async def handle_webhook(request: Request):
             elif action == "buy":
                 close_position(symbol, qty)
                 print(f'Closed a Short for {symbol}')
-                time.sleep(10)  # Wait for 10 seconds before opening a new position
                 open_position('Buy', symbol, qty)
                 print(f'Case 6: Opened a Long for {symbol}')
 
@@ -81,10 +79,10 @@ def open_position(side, symbol, qty):
 def close_position(symbol, qty):
     position_info = session.get_positions(category="linear", symbol=symbol)
     if position_info['result']['list']:
-        side = position_info['result']['list'][0]['side']
+        side = "Buy" if position_info['result']['list'][0]['side'] == "Sell" else "Sell"
         session.place_order(
             category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
-        print(f'Closed a {side} position for {symbol}')
+        print(f'Closed a {position_info["result"]["list"][0]["side"]} position for {symbol}')
 
 
 if __name__ == "__main__":
