@@ -91,18 +91,16 @@ async def check_positions():
         try:
             symbols = ['FETUSDT']  # Add the symbols you want to check positions for
             for symbol in symbols:
-                print(f"Checking positions for symbol: {symbol}")
                 positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
 
                 for position in positions:
                     symbol = position['symbol']
                     position_idx = position['positionIdx']
-                    print(f"Processing position for symbol: {symbol}")
 
                     if 'unrealisedPnl' in position:
                         unrealised_pnl = float(position['unrealisedPnl'])
                         unrealised_pnl_rounded = round(unrealised_pnl, 2)
-                        print(f"Unrealised PnL for position {position_idx}: ${unrealised_pnl_rounded}")
+                        print(f"Unrealised PnL for {symbol}: ${unrealised_pnl_rounded}")
                     else:
                         print(f"Unrealised PnL not found for position {position_idx} of symbol {symbol}")
                         continue
@@ -116,30 +114,28 @@ async def check_positions():
 
                     if 'avgPrice' in position:
                         avgPrice = float(position['avgPrice'])
-                        print(f"Entry price for position: {avgPrice}")
                     else:
-                        print(f"Entry price and average price not found for position {position_idx} of symbol {symbol}")
                         continue
 
                     if unrealised_pnl > 3.0 and position_idx not in processed_positions:
                         print(f"Position meets the criteria for taking profit")
                         qty_to_close = size * 0.5
-                        print(f"Closing {qty_to_close} units of position {position_idx}")
+                        print(f"Closing {qty_to_close} units of {symbol}")
                         close_position(symbol, qty_to_close)
 
                         stop_loss = avgPrice
-                        print(f"Moving stop loss to {stop_loss} for position")
+                        print(f"Moving stop loss to {stop_loss} for {symbol}")
                         update_stop_loss(symbol, stop_loss)
 
                         processed_positions.add(position_idx)
                         print(f"Added position to the processed set")
                     else:
-                        print(f"Position does not meet the criteria for taking profit")
+                        continue
 
         except Exception as e:
             print(f"Error while checking positions: {str(e)}")
 
-        await asyncio.sleep(5)
+        await asyncio.sleep(15)
 def update_stop_loss(symbol, stop_loss):
     session.set_trading_stop(
         category="linear",
