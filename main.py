@@ -92,7 +92,7 @@ def check_positions():
         try:
             print("#####################")
             for symbol in symbols:
-                time.sleep(5)
+                time.sleep(2)
                 positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
 
                 if positions:
@@ -115,39 +115,27 @@ def check_positions():
                         print(f"Size not found or empty for position of symbol {symbol}")
                         continue
 
-                    if 'avgPrice' in position and position['avgPrice'] != '':
-                        avgPrice = float(position['avgPrice'])
-                    else:
-                        print(f"Average price not found or empty for position {position_idx} of symbol {symbol}")
-                        continue
-
-                    if unrealised_pnl > 3.0 and position_idx not in processed_positions:
+                    if unrealised_pnl >= 3.0 and position_idx not in processed_positions:
                         print(f"Position meets the criteria for taking profit")
-                        qty_to_close = size * 0.5
-                        print(f"Closing {qty_to_close} units of {symbol}")
-                        close_position(symbol, qty_to_close)
+                        print(f"Closing the entire position for {symbol}")
+                        close_position(symbol, size)
 
-                        stop_loss = avgPrice
-                        print(f"Moving stop loss to {stop_loss} for {symbol}")
-                        update_stop_loss(symbol, stop_loss)
+                        processed_positions.add(position_idx)
+                        print(f"Added position to the processed set")
+                    elif unrealised_pnl <= -3.0 and position_idx not in processed_positions:
+                        print(f"Position meets the criteria for stopping loss")
+                        print(f"Closing the entire position for {symbol}")
+                        close_position(symbol, size)
 
                         processed_positions.add(position_idx)
                         print(f"Added position to the processed set")
                 else:
                     print(f"No positions found for symbol {symbol}")
 
-            time.sleep(5)  # Delay for 5 seconds before the next iteration
+            time.sleep(2)  # Delay for 5 seconds before the next iteration
 
         except Exception as e:
             print(f"Error while checking positions: {str(e)}")
-
-def update_stop_loss(symbol, stop_loss):
-    session.set_trading_stop(
-        category="linear",
-        symbol=symbol,
-        stopLoss=str(stop_loss)
-    )
-    print(f'Updated stop loss for {symbol} to {stop_loss}')
 
 @app.on_event("startup")
 async def startup_event():
