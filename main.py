@@ -1,10 +1,16 @@
 import asyncio
-import time
 import json
 import logging
+import time
+
 from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
 from datetime import datetime, timedelta
+from threading import Lock
+
+position_lock = Lock()
+position_processing = {}
+
 
 app = FastAPI()
 
@@ -165,12 +171,23 @@ def check_positions():
                         size = float(position['size'])
                     else:
                         continue
+
                     if unrealised_pnl >= 0.05:
-                        logger.info(f"Closing the entire position for {symbol} (Profit)")
-                        close_position(symbol, size)
+                        with position_lock:
+                            if symbol not in position_processing:
+                                position_processing[symbol] = True
+                                logger.info(f"Closing the entire position for {symbol} (Profit)")
+                                close_position(symbol, size)
+                                time.sleep(5)  # Add a timeout of 5 seconds
+                                position_processing[symbol] = False
                     elif unrealised_pnl <= -1.5:
-                        logger.info(f"Closing the entire position for {symbol} (Loss)")
-                        close_position(symbol, size)
+                        with position_lock:
+                            if symbol not in position_processing:
+                                position_processing[symbol] = True
+                                logger.info(f"Closing the entire position for {symbol} (Loss)")
+                                close_position(symbol, size)
+                                time.sleep(5)  # Add a timeout of 5 seconds
+                                position_processing[symbol] = False
                 else:
                     logger.info(f"No positions found for {symbol}")
                     continue
