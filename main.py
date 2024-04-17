@@ -1,14 +1,15 @@
 import asyncio
-
+import json
 from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
-import json
 
 app = FastAPI()
 
 api_key = 'ULI4j96SQhGePVhxCu'
 api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
+
+processed_positions = set()
 
 @app.get("/")
 async def read_root():
@@ -85,6 +86,71 @@ def close_position(symbol, qty):
             category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
         print(f'Closed a {position_info["result"]["list"][0]["side"]} position for {symbol}')
 
+async def check_positions():
+    while True:
+        try:
+            symbols = ['FETUSDT']  # Add the symbols you want to check positions for
+            for symbol in symbols:
+                print(f"Checking positions for symbol: {symbol}")
+                positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
+
+                for position in positions:
+                    symbol = position['symbol']
+                    position_idx = position['positionIdx']
+                    print(f"Processing position for symbol: {symbol}")
+
+                    if 'unrealisedPnl' in position:
+                        unrealised_pnl = float(position['unrealisedPnl'])
+                        unrealised_pnl_rounded = round(unrealised_pnl, 2)
+                        print(f"Unrealised PnL for position {position_idx}: ${unrealised_pnl_rounded}")
+                    else:
+                        print(f"Unrealised PnL not found for position {position_idx} of symbol {symbol}")
+                        continue
+
+                    if 'size' in position:
+                        size = float(position['size'])
+                        print(f"Size for position: {size}")
+                    else:
+                        print(f"Size not found for position of symbol {symbol}")
+                        continue
+
+                    if 'avgPrice' in position:
+                        avgPrice = float(position['avgPrice'])
+                        print(f"Entry price for position: {avgPrice}")
+                    else:
+                        print(f"Entry price and average price not found for position {position_idx} of symbol {symbol}")
+                        continue
+
+                    if unrealised_pnl > 1.0 and position_idx not in processed_positions:
+                        print(f"Position meets the criteria for taking profit")
+                        qty_to_close = size * 0.5
+                        print(f"Closing {qty_to_close} units of position {position_idx}")
+                        close_position(symbol, qty_to_close)
+
+                        stop_loss = avgPrice
+                        print(f"Moving stop loss to {stop_loss} for position")
+                        update_stop_loss(symbol, stop_loss)
+
+                        processed_positions.add(position_idx)
+                        print(f"Added position to the processed set")
+                    else:
+                        print(f"Position does not meet the criteria for taking profit")
+
+        except Exception as e:
+            print(f"Error while checking positions: {str(e)}")
+
+        await asyncio.sleep(5)
+def update_stop_loss(symbol, stop_loss):
+    session.set_trading_stop(
+        category="linear",
+        symbol=symbol,
+        stopLoss=str(stop_loss)
+    )
+    print(f'Updated stop loss for {symbol} to {stop_loss}')
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(check_positions())
 
 if __name__ == "__main__":
     import uvicorn
