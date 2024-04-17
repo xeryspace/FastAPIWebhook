@@ -29,11 +29,16 @@ async def handle_webhook(request: Request):
         if action not in ['buy', 'sell']:
             return {"status": "ignored", "reason": f"Invalid action: {action}"}
 
+        print(f"Received {action} action for {symbol}")
+
         # Retrieve the current position for the symbol
         position_info = session.get_positions(category="linear", symbol=symbol)
         current_position = None
         if position_info['result']['list']:
             current_position = position_info['result']['list'][0]['side']
+            print(f"Current position for {symbol}: {current_position}")
+        else:
+            print(f"No current position for {symbol}")
 
         if current_position is None:
             if action == "sell":
