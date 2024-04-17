@@ -11,7 +11,6 @@ from threading import Lock
 position_lock = Lock()
 position_processing = {}
 
-
 app = FastAPI()
 
 api_key = 'ULI4j96SQhGePVhxCu'
@@ -52,7 +51,6 @@ async def handle_webhook(request: Request):
         candle_time = current_time.replace(second=0, microsecond=0)
         next_candle_time = candle_time + timedelta(minutes=(3 - candle_time.minute % 3))
         seconds_remaining = (next_candle_time - current_time).total_seconds()
-        to_check = seconds_remaining + 5
         if seconds_remaining <= 15:
             await process_signal(symbol, qty, action, entry_price)
         else:
@@ -61,23 +59,9 @@ async def handle_webhook(request: Request):
             if action == 'buy' and current_price >= entry_price:
                 logger.info(f"Buy Action, Current Price: {current_price}, Entry Price: {entry_price}")
                 await process_signal(symbol, qty, action, entry_price)
-                await asyncio.sleep(to_check)
-                logger.info(f"Waited another {to_check} sec, Current Price: {current_price}, Entry Price: {entry_price}")
-                logger.info(f"Current Price should be Higher then Entry, since we are Longing")
-                position_exists = await check_position_exists(symbol)
-                if current_price < entry_price and position_exists:
-                    await close_position(symbol, qty)
-                    logger.info(f"Should have closed the Long Position")
             elif action == 'sell' and current_price <= entry_price:
                 logger.info(f"Sell Action, Current Price: {current_price}, Entry Price: {entry_price}")
                 await process_signal(symbol, qty, action, entry_price)
-                await asyncio.sleep(to_check)
-                logger.info(f"Waited another {to_check} sec, Current Price: {current_price}, Entry Price: {entry_price}")
-                logger.info(f"Current Price should be Smaller then Entry, since we are Shorting")
-                position_exists = await check_position_exists(symbol)
-                if current_price > entry_price and position_exists:
-                    await close_position(symbol, qty)
-                    logger.info(f"Should have closed the Short Position")
             else:
                 logger.info(f"Ignored because {action}-order and:")
                 logger.info(f"Entry Price was : {entry_price}")
@@ -163,53 +147,6 @@ async def process_signal(symbol, qty, action, entry_price):
     except Exception as e:
         logger.error(f"Error in process_signal: {str(e)}")
         raise
-
-def check_positions():
-    symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT', '1000PEPEUSDT']  # Add the symbols you want to check positions for
-    while True:
-        time.sleep(0.5)
-        try:
-            for symbol in symbols:
-                positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
-
-                if positions:
-                    position = positions[0]  # Get the first position for the symbol
-                    symbol = position['symbol']
-
-                    if 'unrealisedPnl' not in position or position['unrealisedPnl'] == '':
-                        continue
-
-                    unrealised_pnl = float(position['unrealisedPnl'])
-
-                    if 'size' in position and position['size'] != '':
-                        size = float(position['size'])
-                    else:
-                        continue
-
-                    if unrealised_pnl >= 0.01:
-                        time.sleep(1)  # Add a timeout of 5 seconds
-                        logger.info(f"Closing the entire position for {symbol} (Profit)")
-                        time.sleep(1)  # Add a timeout of 5 seconds
-                        logger.info("HAHA I SHOULD COME ONCE AFTER 1 SEC")
-                        close_position(symbol, size)
-                    elif unrealised_pnl <= -0.02:
-                        time.sleep(1)  # Add a timeout of 5 seconds
-                        logger.info(f"Closing the entire position for {symbol} (Loss)")
-                        time.sleep(1)  # Add a timeout of 5 seconds
-                        logger.info("HAHA I SHOULD COME ONCE AFTER 1 SEC")
-                        close_position(symbol, size)
-                else:
-                    logger.info(f"No positions found for {symbol}")
-                    continue
-
-        except Exception as e:
-            logger.error(f"Error in check_positions: {str(e)}")
-            continue
-
-@app.on_event("startup")
-async def startup_event():
-    import threading
-    threading.Thread(target=check_positions).start()
 
 if __name__ == "__main__":
     import uvicorn
