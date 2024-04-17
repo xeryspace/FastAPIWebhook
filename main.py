@@ -40,7 +40,7 @@ async def handle_webhook(request: Request):
         else:
             print(f"No current position for {symbol}")
 
-        if current_position is None:
+        if current_position is None or current_position == "":
             if action == "sell":
                 open_position('Sell', symbol, qty)
                 print(f'Case 1: Opened a Short for {symbol}')
