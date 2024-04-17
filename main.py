@@ -89,12 +89,14 @@ def close_position(symbol, qty):
 def check_positions():
     symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT']  # Add the symbols you want to check positions for
     while True:
-        print("__________________________________")
         try:
+            print("#####################")
             for symbol in symbols:
+                time.sleep(5)
                 positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
 
-                for position in positions:
+                if positions:
+                    position = positions[0]  # Get the first position for the symbol
                     symbol = position['symbol']
                     position_idx = position['positionIdx']
 
@@ -131,12 +133,13 @@ def check_positions():
 
                         processed_positions.add(position_idx)
                         print(f"Added position to the processed set")
-                    else:
-                        continue
-                time.sleep(5)
+                else:
+                    print(f"No positions found for symbol {symbol}")
+
+            time.sleep(5)  # Delay for 5 seconds before the next iteration
+
         except Exception as e:
             print(f"Error while checking positions: {str(e)}")
-        time.sleep(5)
 
 def update_stop_loss(symbol, stop_loss):
     session.set_trading_stop(
