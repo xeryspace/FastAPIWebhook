@@ -165,7 +165,7 @@ def check_positions():
                         size = float(position['size'])
                     else:
                         continue
-                    if unrealised_pnl >= 0.1:
+                    if unrealised_pnl >= 0.05:
                         logger.info(f"Closing the entire position for {symbol} (Profit)")
                         close_position(symbol, size)
                     elif unrealised_pnl <= -1.5:
