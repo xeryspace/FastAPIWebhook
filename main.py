@@ -87,7 +87,7 @@ def close_position(symbol, qty):
         print(f'Closed a {position_info["result"]["list"][0]["side"]} position for {symbol}')
 
 def check_positions():
-    symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT']  # Add the symbols you want to check positions for
+    symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT', '1000PEPEUSDT']  # Add the symbols you want to check positions for
     while True:
         try:
             print("#####################")
