@@ -46,16 +46,17 @@ async def handle_webhook(request: Request):
         candle_time = current_time.replace(second=0, microsecond=0)
         next_candle_time = candle_time + timedelta(minutes=(3 - candle_time.minute % 3))
         seconds_remaining = (next_candle_time - current_time).total_seconds()
-        if seconds_remaining <= 25:
+        to_check = seconds_remaining + 5
+        if seconds_remaining <= 15:
             await process_signal(symbol, qty, action, entry_price)
         else:
-            await asyncio.sleep(25)
+            await asyncio.sleep(15)
             current_price = get_current_price(symbol)
             if action == 'buy' and current_price >= entry_price:
                 logger.info(f"Buy Action, Current Price: {current_price}, Entry Price: {entry_price}")
                 await process_signal(symbol, qty, action, entry_price)
-                await asyncio.sleep(30)
-                logger.info(f"Waited another 30 sec, Current Price: {current_price}, Entry Price: {entry_price}")
+                await asyncio.sleep(to_check)
+                logger.info(f"Waited another {to_check} sec, Current Price: {current_price}, Entry Price: {entry_price}")
                 logger.info(f"Current Price should be Higher then Entry, since we are Longing")
                 if current_price < entry_price:
                     await close_position(symbol, qty)
@@ -63,14 +64,16 @@ async def handle_webhook(request: Request):
             elif action == 'sell' and current_price <= entry_price:
                 logger.info(f"Sell Action, Current Price: {current_price}, Entry Price: {entry_price}")
                 await process_signal(symbol, qty, action, entry_price)
-                await asyncio.sleep(30)
-                logger.info(f"Waited another 30 sec, Current Price: {current_price}, Entry Price: {entry_price}")
+                await asyncio.sleep(to_check)
+                logger.info(f"Waited another {to_check} sec, Current Price: {current_price}, Entry Price: {entry_price}")
                 logger.info(f"Current Price should be Smaller then Entry, since we are Shorting")
                 if current_price > entry_price:
                     await close_position(symbol, qty)
                     logger.info(f"Should have closed the Short Position")
             else:
-                logger.info(f"Price condition not met after 15 seconds for {symbol}. Signal ignored.")
+                logger.info(f"Ignored because {action}-order and:")
+                logger.info(f"Entry Price was : {entry_price}")
+                logger.info(f"Current Price is : {current_price}")
 
         return {"status": "success", "data": "Position updated"}
 
