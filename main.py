@@ -1,13 +1,37 @@
+import asyncio
+
 from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
 import json
-import time
 
 app = FastAPI()
 
 api_key = 'ULI4j96SQhGePVhxCu'
 api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
+
+symbols_to_check = ["OGUSDT", "VETUSDT", "WIFUSDT", "ONGUSDT", "DEGENUSDT"]
+
+async def check_positions():
+    while True:
+        for symbol in symbols_to_check:
+            position_info = session.get_positions(category="linear", symbol=symbol)
+            if position_info['result']['list']:
+                position = position_info['result']['list'][0]
+                side = position['side']
+                unrealised_pnl_pcnt = float(position['unrealised_pnl_pcnt'])
+                print(f"Open Position for {symbol} / Side: {side} / Current PNL: {unrealised_pnl_pcnt}%")
+
+                if unrealised_pnl_pcnt >= 10:
+                    qty = position['size']
+                    close_position(symbol, qty)
+                    print(f'Closed a {side} position for {symbol} with 10% unrealized profit')
+
+        await asyncio.sleep(30)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(check_positions())
 
 @app.get("/")
 async def read_root():
