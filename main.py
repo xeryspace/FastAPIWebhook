@@ -167,6 +167,7 @@ async def process_signal(symbol, qty, action, entry_price):
 def check_positions():
     symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT', '1000PEPEUSDT']  # Add the symbols you want to check positions for
     while True:
+        time.sleep(0.5)
         try:
             for symbol in symbols:
                 positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
@@ -185,22 +186,18 @@ def check_positions():
                     else:
                         continue
 
-                    if unrealised_pnl >= 0.05:
-                        with position_lock:
-                            if symbol not in position_processing:
-                                position_processing[symbol] = True
-                                logger.info(f"Closing the entire position for {symbol} (Profit)")
-                                close_position(symbol, size)
-                                time.sleep(5)  # Add a timeout of 5 seconds
-                                position_processing[symbol] = False
-                    elif unrealised_pnl <= -1.5:
-                        with position_lock:
-                            if symbol not in position_processing:
-                                position_processing[symbol] = True
-                                logger.info(f"Closing the entire position for {symbol} (Loss)")
-                                close_position(symbol, size)
-                                time.sleep(5)  # Add a timeout of 5 seconds
-                                position_processing[symbol] = False
+                    if unrealised_pnl >= 0.01:
+                        time.sleep(1)  # Add a timeout of 5 seconds
+                        logger.info(f"Closing the entire position for {symbol} (Profit)")
+                        time.sleep(1)  # Add a timeout of 5 seconds
+                        logger.info("HAHA I SHOULD COME ONCE AFTER 1 SEC")
+                        close_position(symbol, size)
+                    elif unrealised_pnl <= -0.02:
+                        time.sleep(1)  # Add a timeout of 5 seconds
+                        logger.info(f"Closing the entire position for {symbol} (Loss)")
+                        time.sleep(1)  # Add a timeout of 5 seconds
+                        logger.info("HAHA I SHOULD COME ONCE AFTER 1 SEC")
+                        close_position(symbol, size)
                 else:
                     logger.info(f"No positions found for {symbol}")
                     continue
@@ -208,7 +205,6 @@ def check_positions():
         except Exception as e:
             logger.error(f"Error in check_positions: {str(e)}")
             continue
-        time.sleep(5)
 
 @app.on_event("startup")
 async def startup_event():
