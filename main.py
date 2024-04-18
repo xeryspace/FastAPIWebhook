@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-import time
+import math
 
 from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
@@ -35,7 +35,6 @@ async def handle_webhook(request: Request):
 
         body = await request.json()
         symbol = body.get("symbol")  # Get the symbol like 'DEGENUSDT' or 'WIFUSDT'
-        qty = body.get("qty")
         action = body.get("action")
 
         if action not in ['buy', 'sell']:
@@ -43,10 +42,7 @@ async def handle_webhook(request: Request):
 
         logger.info(f"Received {action} action for {symbol}")
 
-        # Get the entry price from the Bybit API
-        entry_price = get_current_price(symbol)
-
-        await process_signal(symbol, qty, action, entry_price)
+        await process_signal(symbol, action)
         return {"status": "success", "data": "Position updated"}
 
     except json.JSONDecodeError as e:
@@ -55,6 +51,25 @@ async def handle_webhook(request: Request):
     except Exception as e:
         logger.error(f"Error in handle_webhook: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def get_wallet_balance(symbol):
+    try:
+        wallet_balance = session.get_wallet_balance(
+            category="spot",
+            accountType="UNIFIED"
+        )
+        if wallet_balance['result']:
+            coin_list = wallet_balance['result']['list'][0]['coin']
+            for coin in coin_list:
+                if coin['coin'] == symbol:
+                    usdt_wallet_balance = coin['walletBalance']
+                    return float(usdt_wallet_balance)
+        return 0.0
+
+    except Exception as e:
+        logger.error(f"Error in get_wallet_balance: {str(e)}")
+        raise
 
 async def check_position_exists(symbol):
     try:
@@ -79,64 +94,49 @@ def get_current_price(symbol):
         logger.error(f"Error in get_current_price: {str(e)}")
         raise
 
-def open_position(side, symbol, qty):
+def open_position(symbol, amount):
     try:
         session.place_order(
-            category="spot", symbol=symbol, side=side, type="MARKET", qty=qty)
+            category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount)
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
         raise
 
-def close_position(symbol, qty):
+def close_position(symbol, amount):
     try:
-        position_info = session.get_wallet_balance(category="spot")
-        if position_info['result']['balances']:
-            for balance in position_info['result']['balances']:
-                if balance['coin'] == symbol.replace("USDT", ""):
-                    side = "Sell" if balance['free'] > 0 else "Buy"
-                    session.place_order(
-                        category="spot", symbol=symbol, side=side, type="MARKET", qty=qty)
+        session.place_order(
+            category="spot", symbol=symbol, side='sell', orderType="Market", qty=amount)
     except Exception as e:
-        logger.error(f"Error in close_position: {str(e)}")
+        logger.error(f"Error in open_position: {str(e)}")
         raise
 
-async def process_signal(symbol, qty, action, entry_price):
-    try:
-        position_info = session.get_positions(category="linear", symbol=symbol)
-        current_position = None
-        current_qty = 0
-        if position_info['result']['list']:
-            current_position = position_info['result']['list'][0]['side']
-            current_qty = float(position_info['result']['list'][0]['size'])
-        logger.info(f"Current position for {symbol}: {current_position}, Quantity: {current_qty}")
 
-        if current_position is None or current_position == "":
-            if action == "sell":
-                logger.info(f"Opening new Sell position for {symbol}")
-                open_position('Sell', symbol, qty)
-            elif action == "buy":
-                logger.info(f"Opening new Buy position for {symbol}")
-                open_position('Buy', symbol, qty)
-        elif current_position == "Buy":
-            if action == "sell":
-                if current_qty == qty:
-                    logger.info(f"Closing Buy position and opening Sell position for {symbol}")
-                    close_position(symbol, qty)
-                    open_position('Sell', symbol, qty)
-                else:
-                    logger.info(f"Closing remaining Buy position and opening Sell position for {symbol}")
-                    close_position(symbol, current_qty)
-                    open_position('Sell', symbol, qty)
-        elif current_position == "Sell":
-            if action == "buy":
-                if current_qty == qty:
-                    logger.info(f"Closing Sell position and opening Buy position for {symbol}")
-                    close_position(symbol, qty)
-                    open_position('Buy', symbol, qty)
-                else:
-                    logger.info(f"Closing remaining Sell position and opening Buy position for {symbol}")
-                    close_position(symbol, current_qty)
-                    open_position('Buy', symbol, qty)
+async def process_signal(symbol, action):
+    try:
+        if action == "buy":
+            # Get the available USDT balance
+            usdt_balance = get_wallet_balance("USDT")
+
+            if usdt_balance > 0:
+                rounded_down = math.floor(usdt_balance)
+                open_position(symbol, rounded_down)
+            else:
+                logger.info(f"Insufficient USDT balance to open a Buy position for {symbol}")
+
+        elif action == "sell":
+            # Get the current position quantity of the symbol
+            symbol_balance = get_wallet_balance('DOGE')
+
+            if symbol_balance > 0:
+                symbol_balance = math.floor(symbol_balance)
+                logger.info(f"Closing {symbol} position with quantity: {symbol_balance}")
+                close_position(symbol, symbol_balance)
+            else:
+                logger.info(f"No {symbol} position to close")
+
+        else:
+            logger.info(f"Invalid action: {action}")
+
     except Exception as e:
         logger.error(f"Error in process_signal: {str(e)}")
         raise
