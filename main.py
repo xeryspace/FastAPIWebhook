@@ -82,18 +82,20 @@ def get_current_price(symbol):
 def open_position(side, symbol, qty):
     try:
         session.place_order(
-            category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
+            category="spot", symbol=symbol, side=side, type="MARKET", qty=qty)
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
         raise
 
 def close_position(symbol, qty):
     try:
-        position_info = session.get_positions(category="linear", symbol=symbol)
-        if position_info['result']['list']:
-            side = "Buy" if position_info['result']['list'][0]['side'] == "Sell" else "Sell"
-            session.place_order(
-                category="linear", symbol=symbol, side=side, orderType="Market", qty=qty)
+        position_info = session.get_wallet_balance(category="spot")
+        if position_info['result']['balances']:
+            for balance in position_info['result']['balances']:
+                if balance['coin'] == symbol.replace("USDT", ""):
+                    side = "Sell" if balance['free'] > 0 else "Buy"
+                    session.place_order(
+                        category="spot", symbol=symbol, side=side, type="MARKET", qty=qty)
     except Exception as e:
         logger.error(f"Error in close_position: {str(e)}")
         raise
