@@ -11,6 +11,8 @@ from threading import Lock
 position_lock = Lock()
 position_processing = {}
 
+current_buy_price = None
+
 app = FastAPI()
 
 api_key = 'ULI4j96SQhGePVhxCu'
@@ -84,7 +86,7 @@ async def check_position_exists(symbol):
 
 def get_current_price(symbol):
     try:
-        ticker = session.get_tickers(category="linear", symbol=symbol)
+        ticker = session.get_tickers(category="spot", symbol=symbol)
         if ticker['result']:
             last_price = float(ticker['result']['list'][0]['lastPrice'])
             return last_price
@@ -95,23 +97,27 @@ def get_current_price(symbol):
         raise
 
 def open_position(symbol, amount):
+    global current_buy_price
     try:
         session.place_order(
             category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount)
+        current_buy_price = get_current_price(symbol)
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
         raise
 
 def close_position(symbol, amount):
+    global current_buy_price
     try:
         session.place_order(
             category="spot", symbol=symbol, side='sell', orderType="Market", qty=amount)
+        current_buy_price = None
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
         raise
 
-
 async def process_signal(symbol, action):
+    global current_buy_price
     try:
         if action == "buy":
             # Get the available USDT balance
@@ -120,6 +126,7 @@ async def process_signal(symbol, action):
             if usdt_balance > 0:
                 rounded_down = math.floor(usdt_balance)
                 open_position(symbol, rounded_down)
+                current_buy_price = get_current_price(symbol)  # Update the current buy price
             else:
                 logger.info(f"Insufficient USDT balance to open a Buy position for {symbol}")
 
@@ -131,6 +138,7 @@ async def process_signal(symbol, action):
                 symbol_balance = math.floor(symbol_balance)
                 logger.info(f"Closing {symbol} position with quantity: {symbol_balance}")
                 close_position(symbol, symbol_balance)
+                current_buy_price = None  # Reset the current buy price
             else:
                 logger.info(f"No {symbol} position to close")
 
@@ -141,6 +149,25 @@ async def process_signal(symbol, action):
         logger.error(f"Error in process_signal: {str(e)}")
         raise
 
+async def check_price():
+    global current_buy_price
+    while True:
+        if current_buy_price is not None:
+            current_price = get_current_price("DOGEUSDT")
+            price_change_percent = (current_price - current_buy_price) / current_buy_price * 100
+            logger.info(f"Current buy price: {current_buy_price}, Current price: {current_price}, Price change: {price_change_percent:.2f}%")
+            if price_change_percent >= 1.65:
+                logger.info(f"Price increased by {price_change_percent:.2f}%. Selling DOGE.")
+                symbol_balance = get_wallet_balance('DOGE')
+                if symbol_balance > 0:
+                    symbol_balance = math.floor(symbol_balance)
+                    close_position("DOGEUSDT", symbol_balance)
+                    current_buy_price = None  # Reset the current buy price
+        await asyncio.sleep(5)  # Check price every 5 seconds
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(check_price())
 
 if __name__ == "__main__":
     import uvicorn

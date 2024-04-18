@@ -1,11 +1,8 @@
 import asyncio
 import json
 import logging
-import time
-
 from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
-from datetime import datetime, timedelta
 from threading import Lock
 
 position_lock = Lock()

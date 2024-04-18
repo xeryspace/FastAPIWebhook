@@ -1,8 +1,7 @@
-import time
+import requests
 import logging
 from pybit.unified_trading import HTTP
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -80,6 +79,18 @@ def close_position(symbol, qty):
     except Exception as e:
         logger.error(f"Error in close_position: {str(e)}")
 
+
+url = "http://127.0.0.1:8000/webhook"
+payload = {
+  "action": "sell",
+  "symbol": "DOGEUSDT"
+}
+params = {
+    "passphrase": "Armjansk12!!"
+}
+
+response = requests.post(url, json=payload, params=params)
+print(response.text)
 
 if __name__ == "__main__":
     check_positions()
