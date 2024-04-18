@@ -146,14 +146,14 @@ async def process_signal(symbol, qty, action, entry_price):
                 close_position(symbol, qty)
                 open_position('Sell', symbol, qty)
                 take_profit_price = calculate_take_profit_price(entry_price, 1.5, qty, 'Sell')
-                set_take_profit(symbol, take_profit_price, qty, 0)  # Set take profit for the Sell position
+                #set_take_profit(symbol, take_profit_price, qty, 0)  # Set take profit for the Sell position
         elif current_position == "Sell":
             if action == "buy":
                 logger.info(f"Closing Sell position and opening Buy position for {symbol}")
                 close_position(symbol, qty)
                 open_position('Buy', symbol, qty)
                 take_profit_price = calculate_take_profit_price(entry_price, 1.5, qty, 'Buy')
-                set_take_profit(symbol, take_profit_price, qty, 0)  # Set take profit for the Buy position
+                #set_take_profit(symbol, take_profit_price, qty, 0)  # Set take profit for the Buy position
     except Exception as e:
         logger.error(f"Error in process_signal: {str(e)}")
         raise
