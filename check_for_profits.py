@@ -11,10 +11,9 @@ api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
 def check_positions():
-    symbols = ['MYROUSDT', 'NEARUSDT', 'SOLUSDT', 'ONGUSDT']  # Add the symbols you want to check positions for
+    symbols = ['1000IQ50USDT']  # Add the symbols you want to check positions for
     processed_positions = {}  # Keep track of processed positions
     while True:
-        time.sleep(2)  # Check positions every 2 seconds
         try:
             for symbol in symbols:
                 positions = session.get_positions(category="linear", symbol=symbol)['result']['list']
@@ -32,13 +31,10 @@ def check_positions():
                         size = float(position['size'])
                     else:
                         continue
-
-                    if symbol not in processed_positions or size != processed_positions[symbol]:
-                        if unrealised_pnl >= 0.5:
-                            logger.info(f"Taking 50% profit and setting trailing stop loss for {symbol}")
-                            take_partial_profit(symbol, size, 0.5)  # Take 50% profit
-                            set_trailing_stop_loss(symbol, 0.4)  # Set trailing stop loss to 2% below current price
-                            processed_positions[symbol] = size  # Store the processed position size
+                    print(unrealised_pnl)
+                    if unrealised_pnl >= 0.2:
+                        logger.info(f"Win")
+                        close_position(symbol, size)
                 else:
                     logger.info(f"No positions found for {symbol}")
 
@@ -56,22 +52,23 @@ def take_partial_profit(symbol, qty, profit_percent):
     except Exception as e:
         logger.error(f"Error in take_partial_profit: {str(e)}")
 
-def set_trailing_stop_loss(symbol, trailing_stop_percent=0.005):
+def set_stop_loss(symbol):
     try:
         position_info = session.get_positions(category="linear", symbol=symbol)
         if position_info['result']['list']:
             position = position_info['result']['list'][0]
             if 'avgPrice' in position and position['avgPrice'] != '':
+                avg_price = float(position['avgPrice'])
+
                 session.set_trading_stop(
                     category="linear",
                     symbol=symbol,
-                    trailing_stop=str(trailing_stop_percent),
-                    trailing_stop_trigger="LastPrice"
+                    stop_loss=str(avg_price)
                 )
             else:
                 logger.warning(f"Average price not found for {symbol}")
     except Exception as e:
-        logger.error(f"Error in set_trailing_stop_loss: {str(e)}")
+        logger.error(f"Error in set_stop_loss: {str(e)}")
 
 def close_position(symbol, qty):
     try:
