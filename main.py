@@ -102,9 +102,11 @@ async def process_signal(symbol, qty, action, entry_price):
     try:
         position_info = session.get_positions(category="linear", symbol=symbol)
         current_position = None
+        current_qty = 0
         if position_info['result']['list']:
             current_position = position_info['result']['list'][0]['side']
-        logger.info(f"Current position for {symbol}: {current_position}")
+            current_qty = float(position_info['result']['list'][0]['size'])
+        logger.info(f"Current position for {symbol}: {current_position}, Quantity: {current_qty}")
 
         if current_position is None or current_position == "":
             if action == "sell":
@@ -115,14 +117,24 @@ async def process_signal(symbol, qty, action, entry_price):
                 open_position('Buy', symbol, qty)
         elif current_position == "Buy":
             if action == "sell":
-                logger.info(f"Closing Buy position and opening Sell position for {symbol}")
-                close_position(symbol, qty)
-                open_position('Sell', symbol, qty)
+                if current_qty == qty:
+                    logger.info(f"Closing Buy position and opening Sell position for {symbol}")
+                    close_position(symbol, qty)
+                    open_position('Sell', symbol, qty)
+                else:
+                    logger.info(f"Closing remaining Buy position and opening Sell position for {symbol}")
+                    close_position(symbol, current_qty)
+                    open_position('Sell', symbol, qty)
         elif current_position == "Sell":
             if action == "buy":
-                logger.info(f"Closing Sell position and opening Buy position for {symbol}")
-                close_position(symbol, qty)
-                open_position('Buy', symbol, qty)
+                if current_qty == qty:
+                    logger.info(f"Closing Sell position and opening Buy position for {symbol}")
+                    close_position(symbol, qty)
+                    open_position('Buy', symbol, qty)
+                else:
+                    logger.info(f"Closing remaining Sell position and opening Buy position for {symbol}")
+                    close_position(symbol, current_qty)
+                    open_position('Buy', symbol, qty)
     except Exception as e:
         logger.error(f"Error in process_signal: {str(e)}")
         raise

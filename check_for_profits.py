@@ -11,7 +11,7 @@ api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
 def check_positions():
-    symbols = ['FETUSDT', '1000BONKUSDT', 'WIFUSDT', '1000PEPEUSDT']  # Add the symbols you want to check positions for
+    symbols = ['SOLUSDT']  # Add the symbols you want to check positions for
     while True:
         time.sleep(2)  # Check positions every 2 seconds
         try:
@@ -32,17 +32,40 @@ def check_positions():
                     else:
                         continue
 
-                    if unrealised_pnl >= 0.5:
-                        logger.info(f"Closing the entire position for {symbol} (Profit)")
-                        close_position(symbol, size)
-                    elif unrealised_pnl <= 0.5:
-                        logger.info(f"Closing the entire position for {symbol} (Loss)")
-                        close_position(symbol, size)
+                    if unrealised_pnl >= 2:
+                        logger.info(f"Taking 50% profit and setting stop loss to entry point for {symbol}")
+                        take_partial_profit(symbol, size, 0.5)  # Take 50% profit
+                        set_stop_loss_to_entry(symbol)  # Set stop loss to entry point
                 else:
                     logger.info(f"No positions found for {symbol}")
 
         except Exception as e:
             logger.error(f"Error in check_positions: {str(e)}")
+def take_partial_profit(symbol, qty, profit_percent):
+    try:
+        position_info = session.get_positions(category="linear", symbol=symbol)
+        if position_info['result']['list']:
+            side = "Buy" if position_info['result']['list'][0]['side'] == "Sell" else "Sell"
+            qty_to_close = qty * profit_percent
+            session.place_order(
+                category="linear", symbol=symbol, side=side, orderType="Market", qty=qty_to_close)
+    except Exception as e:
+        logger.error(f"Error in take_partial_profit: {str(e)}")
+
+def set_stop_loss_to_entry(symbol):
+    try:
+        position_info = session.get_positions(category="linear", symbol=symbol)
+        if position_info['result']['list']:
+            entry_price = float(position_info['result']['list'][0]['entryPrice'])
+            stop_loss = entry_price
+
+            session.set_trading_stop(
+                category="linear",
+                symbol=symbol,
+                stop_loss=stop_loss
+            )
+    except Exception as e:
+        logger.error(f"Error in set_stop_loss_to_entry: {str(e)}")
 
 def close_position(symbol, qty):
     try:
