@@ -51,10 +51,11 @@ async def handle_webhook(request: Request):
         candle_time = current_time.replace(second=0, microsecond=0)
         next_candle_time = candle_time + timedelta(minutes=(3 - candle_time.minute % 3))
         seconds_remaining = (next_candle_time - current_time).total_seconds()
-        if seconds_remaining <= 35:
+        if seconds_remaining <= 45:
+            await asyncio.sleep(40)
             await process_signal(symbol, qty, action, entry_price)
         else:
-            await asyncio.sleep(35)
+            await asyncio.sleep(45)
             current_price = get_current_price(symbol)
             tolerance_percentage = 0.0008  # 0.08% tolerance
             if action == 'buy' and current_price >= entry_price * (1 - tolerance_percentage):
