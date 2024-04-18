@@ -56,19 +56,16 @@ def take_partial_profit(symbol, qty, profit_percent):
     except Exception as e:
         logger.error(f"Error in take_partial_profit: {str(e)}")
 
-def set_trailing_stop_loss(symbol, trailing_stop_percent):
+def set_trailing_stop_loss(symbol, trailing_stop_percent=0.005):
     try:
         position_info = session.get_positions(category="linear", symbol=symbol)
         if position_info['result']['list']:
             position = position_info['result']['list'][0]
             if 'avgPrice' in position and position['avgPrice'] != '':
-                avg_price = float(position['avgPrice'])
-                trailing_stop_value = avg_price * trailing_stop_percent
-
                 session.set_trading_stop(
                     category="linear",
                     symbol=symbol,
-                    trailing_stop=str(trailing_stop_value),
+                    trailing_stop=str(trailing_stop_percent),
                     trailing_stop_trigger="LastPrice"
                 )
             else:
