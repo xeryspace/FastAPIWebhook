@@ -133,22 +133,53 @@ async def process_signal(symbol, qty, action, entry_price):
             if action == "sell":
                 logger.info(f"Opening new Sell position for {symbol}")
                 open_position('Sell', symbol, qty)
+                take_profit_price = calculate_take_profit_price(entry_price, 1, qty, 'Sell')
+                set_take_profit(symbol, take_profit_price, qty, 0)  # Set take profit for the Sell position
             elif action == "buy":
                 logger.info(f"Opening new Buy position for {symbol}")
                 open_position('Buy', symbol, qty)
+                take_profit_price = calculate_take_profit_price(entry_price, 1, qty, 'Buy')
+                set_take_profit(symbol, take_profit_price, qty, 0)  # Set take profit for the Buy position
         elif current_position == "Buy":
             if action == "sell":
                 logger.info(f"Closing Buy position and opening Sell position for {symbol}")
                 close_position(symbol, qty)
                 open_position('Sell', symbol, qty)
+                take_profit_price = calculate_take_profit_price(entry_price, 1.5, qty, 'Sell')
+                set_take_profit(symbol, take_profit_price, qty, 0)  # Set take profit for the Sell position
         elif current_position == "Sell":
             if action == "buy":
                 logger.info(f"Closing Sell position and opening Buy position for {symbol}")
                 close_position(symbol, qty)
                 open_position('Buy', symbol, qty)
+                take_profit_price = calculate_take_profit_price(entry_price, 1.5, qty, 'Buy')
+                set_take_profit(symbol, take_profit_price, qty, 0)  # Set take profit for the Buy position
     except Exception as e:
         logger.error(f"Error in process_signal: {str(e)}")
         raise
+
+def calculate_take_profit_price(entry_price, profit_amount, qty, side):
+    if side == 'Buy':
+        take_profit_price = entry_price + (profit_amount / qty)
+    else:  # side == 'Sell'
+        take_profit_price = entry_price - (profit_amount / qty)
+    return take_profit_price
+
+def set_take_profit(symbol, take_profit_price, qty, position_idx):
+    try:
+        session.set_trading_stop(
+            category="linear",
+            symbol=symbol,
+            takeProfit=str(take_profit_price),
+            tpTriggerBy="LastPrice",
+            tpslMode="Full",
+            tpOrderType="Market",
+            positionIdx=position_idx,
+        )
+    except Exception as e:
+        logger.error(f"Error in set_take_profit: {str(e)}")
+        raise
+
 
 if __name__ == "__main__":
     import uvicorn
