@@ -46,29 +46,7 @@ async def handle_webhook(request: Request):
         # Get the entry price from the Bybit API
         entry_price = get_current_price(symbol)
 
-        # Check the time of the candle
-        current_time = datetime.now()
-        candle_time = current_time.replace(second=0, microsecond=0)
-        next_candle_time = candle_time + timedelta(minutes=(3 - candle_time.minute % 3))
-        seconds_remaining = (next_candle_time - current_time).total_seconds()
-        if seconds_remaining <= 45:
-            await asyncio.sleep(40)
-            await process_signal(symbol, qty, action, entry_price)
-        else:
-            await asyncio.sleep(45)
-            current_price = get_current_price(symbol)
-            tolerance_percentage = 0.0008  # 0.08% tolerance
-            if action == 'buy' and current_price >= entry_price * (1 - tolerance_percentage):
-                logger.info(f"Buy Action, Current Price: {current_price}, Entry Price: {entry_price}")
-                await process_signal(symbol, qty, action, entry_price)
-            elif action == 'sell' and current_price <= entry_price * (1 + tolerance_percentage):
-                logger.info(f"Sell Action, Current Price: {current_price}, Entry Price: {entry_price}")
-                await process_signal(symbol, qty, action, entry_price)
-            else:
-                logger.info(f"Ignored because {action}-order and:")
-                logger.info(f"Entry Price was : {entry_price}")
-                logger.info(f"Current Price is : {current_price}")
-
+        await process_signal(symbol, qty, action, entry_price)
         return {"status": "success", "data": "Position updated"}
 
     except json.JSONDecodeError as e:
