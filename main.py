@@ -149,11 +149,11 @@ async def check_price():
         if current_buy_price > 0:
             current_price = get_current_price("MYROUSDT")
             price_change_percent = (current_price - current_buy_price) / current_buy_price * 100
-            if price_change_percent >= 0.7:
+            if price_change_percent >= 2.4:
                 logger.info(f"Price increased by {price_change_percent:.2f}%. Selling MYRO.")
                 symbol_balance = get_wallet_balance('MYRO')
                 if symbol_balance > 10:
-                    symbol_balance = math.floor(symbol_balance/2)
+                    symbol_balance = math.floor(symbol_balance)
                     close_position("MYROUSDT", symbol_balance)
         await asyncio.sleep(2)
 
