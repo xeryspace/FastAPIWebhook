@@ -164,13 +164,16 @@ async def process_signal(symbol, action):
 async def check_price():
     global current_buy_price_degen, current_buy_price_myro
     target_profit_percent = 1.8
-    sell_threshold_percent = 1
+    initial_sell_threshold_percent = 1
     target_loss_percent = -1.4
+    profit_threshold_increment = 0.2
+    sell_threshold_increment = 0.2
 
     while True:
         if current_buy_price_degen > 0:
             current_price_degen = get_current_price("DEGENUSDT")
             price_change_percent_degen = (current_price_degen - current_buy_price_degen) / current_buy_price_degen * 100
+            sell_threshold_percent_degen = initial_sell_threshold_percent
 
             if price_change_percent_degen >= target_profit_percent:
                 logger.info(f"Price increased by {price_change_percent_degen:.2f}% for DEGENUSDT. Monitoring for sell threshold.")
@@ -178,7 +181,12 @@ async def check_price():
                     current_price_degen = get_current_price("DEGENUSDT")
                     price_change_percent_degen = (current_price_degen - current_buy_price_degen) / current_buy_price_degen * 100
 
-                    if price_change_percent_degen <= sell_threshold_percent:
+                    if price_change_percent_degen >= target_profit_percent + profit_threshold_increment:
+                        target_profit_percent += profit_threshold_increment
+                        sell_threshold_percent_degen += sell_threshold_increment
+                        logger.info(f"Profit threshold increased to {target_profit_percent:.2f}% and sell threshold increased to {sell_threshold_percent_degen:.2f}% for DEGENUSDT.")
+
+                    if price_change_percent_degen <= sell_threshold_percent_degen:
                         logger.info(f"Price retraced to {price_change_percent_degen:.2f}% for DEGENUSDT. Selling DEGEN.")
                         symbol_balance_degen = get_wallet_balance("DEGEN")
                         if symbol_balance_degen > 100:
@@ -197,6 +205,7 @@ async def check_price():
         if current_buy_price_myro > 0:
             current_price_myro = get_current_price("MYROUSDT")
             price_change_percent_myro = (current_price_myro - current_buy_price_myro) / current_buy_price_myro * 100
+            sell_threshold_percent_myro = initial_sell_threshold_percent
 
             if price_change_percent_myro >= target_profit_percent:
                 logger.info(f"Price increased by {price_change_percent_myro:.2f}% for MYROUSDT. Monitoring for sell threshold.")
@@ -204,7 +213,12 @@ async def check_price():
                     current_price_myro = get_current_price("MYROUSDT")
                     price_change_percent_myro = (current_price_myro - current_buy_price_myro) / current_buy_price_myro * 100
 
-                    if price_change_percent_myro <= sell_threshold_percent:
+                    if price_change_percent_myro >= target_profit_percent + profit_threshold_increment:
+                        target_profit_percent += profit_threshold_increment
+                        sell_threshold_percent_myro += sell_threshold_increment
+                        logger.info(f"Profit threshold increased to {target_profit_percent:.2f}% and sell threshold increased to {sell_threshold_percent_myro:.2f}% for MYROUSDT.")
+
+                    if price_change_percent_myro <= sell_threshold_percent_myro:
                         logger.info(f"Price retraced to {price_change_percent_myro:.2f}% for MYROUSDT. Selling MYRO.")
                         symbol_balance_myro = get_wallet_balance("MYRO")
                         if symbol_balance_myro > 10:
