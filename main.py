@@ -168,7 +168,7 @@ async def check_price():
     global current_buy_price_degen, current_buy_price_myro
     target_profit_percent = 1.8
     initial_sell_threshold_percent = 1
-    target_loss_percent = -1.4
+    target_loss_percent = -2.7
     profit_threshold_increment = 0.2
     sell_threshold_increment = 0.2
 
