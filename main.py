@@ -8,7 +8,6 @@ from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
 
 current_buy_price_degen = 0
-current_buy_price_myro = 0
 
 app = FastAPI()
 
@@ -93,71 +92,48 @@ def get_current_price(symbol):
         raise
 
 def open_position(symbol, amount):
-    global current_buy_price_degen, current_buy_price_myro
+    global current_buy_price_degen
     try:
         session.place_order(
             category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount)
         if symbol == "DEGENUSDT":
             current_buy_price_degen = get_current_price(symbol)
-        elif symbol == "MYROUSDT":
-            current_buy_price_myro = get_current_price(symbol)
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
         raise
 
 def close_position(symbol, amount):
-    global current_buy_price_degen, current_buy_price_myro
+    global current_buy_price_degen
     try:
         session.place_order(
             category="spot", symbol=symbol, side='sell', orderType="Market", qty=amount)
         if symbol == "DEGENUSDT":
             current_buy_price_degen = 0
             print(f"Current buy price for DEGENUSDT: {current_buy_price_degen}")
-        elif symbol == "MYROUSDT":
-            current_buy_price_myro = 0
-            print(f"Current buy price for MYROUSDT: {current_buy_price_myro}")
     except Exception as e:
         logger.error(f"Error in close_position: {str(e)}")
         raise
 
 async def process_signal(symbol, action):
-    global current_buy_price_degen, current_buy_price_myro
+    global current_buy_price_degen
     try:
         if action == "buy":
             usdt_balance = get_wallet_balance("USDT")
             if usdt_balance > 5:
-                if usdt_balance > 400:
-                    rounded_down = math.floor(usdt_balance / 2)  # Divide the balance by 2 to allocate for each coin
-                else:
-                    rounded_down = math.floor(usdt_balance)  # Use the entire remaining balance for the next coin
+                rounded_down = math.floor(usdt_balance)
                 open_position(symbol, rounded_down)
-                if symbol == "DEGENUSDT":
-                    current_buy_price_degen = get_current_price(symbol)
-                elif symbol == "MYROUSDT":
-                    current_buy_price_myro = get_current_price(symbol)
+                current_buy_price_degen = get_current_price(symbol)
             else:
                 logger.info(f"Insufficient USDT balance to open a Buy position for {symbol}")
-
         elif action == "sell":
-            if symbol == "DEGENUSDT":
-                symbol_balance = get_wallet_balance("DEGEN")
-                if symbol_balance > 100:
-                    symbol_balance = math.floor(symbol_balance)
-                    logger.info(f"Closing {symbol} position with quantity: {symbol_balance}")
-                    close_position(symbol, symbol_balance)
-                    current_buy_price_degen = 0
-                else:
-                    logger.info(f"DEGEN balance is not above 100. No position to close.")
-            elif symbol == "MYROUSDT":
-                symbol_balance = get_wallet_balance("MYRO")
-                if symbol_balance > 10:
-                    symbol_balance = math.floor(symbol_balance)
-                    logger.info(f"Closing {symbol} position with quantity: {symbol_balance}")
-                    close_position(symbol, symbol_balance)
-                    current_buy_price_myro = 0
-                else:
-                    logger.info(f"No {symbol} position to close")
-
+            symbol_balance = get_wallet_balance("DEGEN")
+            if symbol_balance > 100:
+                symbol_balance = math.floor(symbol_balance)
+                logger.info(f"Closing {symbol} position with quantity: {symbol_balance}")
+                close_position(symbol, symbol_balance)
+                current_buy_price_degen = 0
+            else:
+                logger.info(f"DEGEN balance is not above 100. No position to close.")
         else:
             logger.info(f"Invalid action: {action}")
 
@@ -166,7 +142,7 @@ async def process_signal(symbol, action):
         raise
 
 async def check_price():
-    global current_buy_price_degen, current_buy_price_myro
+    global current_buy_price_degen
     target_profit_percent = 1.6
     initial_sell_threshold_percent = 1
     profit_threshold_increment = 0.2
@@ -195,31 +171,6 @@ async def check_price():
                         if symbol_balance_degen > 100:
                             symbol_balance_degen = math.floor(symbol_balance_degen)
                             close_position("DEGENUSDT", symbol_balance_degen)
-                        break
-                    await asyncio.sleep(0.1)
-
-        if current_buy_price_myro > 0:
-            current_price_myro = get_current_price("MYROUSDT")
-            price_change_percent_myro = (current_price_myro - current_buy_price_myro) / current_buy_price_myro * 100
-            sell_threshold_percent_myro = initial_sell_threshold_percent
-
-            if price_change_percent_myro >= target_profit_percent:
-                logger.info(f"Price increased by {price_change_percent_myro:.2f}% for MYROUSDT. Monitoring for sell threshold.")
-                while True:
-                    current_price_myro = get_current_price("MYROUSDT")
-                    price_change_percent_myro = (current_price_myro - current_buy_price_myro) / current_buy_price_myro * 100
-
-                    if price_change_percent_myro >= target_profit_percent + profit_threshold_increment:
-                        target_profit_percent += profit_threshold_increment
-                        sell_threshold_percent_myro += sell_threshold_increment
-                        logger.info(f"Profit threshold increased to {target_profit_percent:.2f}% and sell threshold increased to {sell_threshold_percent_myro:.2f}% for MYROUSDT.")
-
-                    if price_change_percent_myro <= sell_threshold_percent_myro:
-                        logger.info(f"Price retraced to {price_change_percent_myro:.2f}% for MYROUSDT. Selling MYRO.")
-                        symbol_balance_myro = get_wallet_balance("MYRO")
-                        if symbol_balance_myro > 10:
-                            symbol_balance_myro = math.floor(symbol_balance_myro)
-                            close_position("MYROUSDT", symbol_balance_myro)
                         break
                     await asyncio.sleep(0.1)
         await asyncio.sleep(0.1)
