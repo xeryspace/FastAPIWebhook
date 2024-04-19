@@ -150,14 +150,14 @@ async def check_price():
             current_price = get_current_price("MYROUSDT")
             price_change_percent = (current_price - current_buy_price) / current_buy_price * 100
             logger.info(f"Current buy price: {current_buy_price}, Current price: {current_price}, Price change: {price_change_percent:.2f}%")
-            if price_change_percent >= 2:
+            if price_change_percent >= 0.8:
                 logger.info(f"Price increased by {price_change_percent:.2f}%. Selling MYRO.")
                 symbol_balance = get_wallet_balance('MYRO')
                 if symbol_balance > 0:
                     symbol_balance = math.floor(symbol_balance)
                     close_position("MYROUSDT", symbol_balance)
                     current_buy_price = None  # Reset the current buy price
-        await asyncio.sleep(5)  # Check price every 5 seconds
+        await asyncio.sleep(2)  # Check price every 5 seconds
 
 @app.on_event("startup")
 async def startup_event():
