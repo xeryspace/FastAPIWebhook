@@ -114,7 +114,6 @@ async def process_signal(symbol, action):
     global current_buy_price
     try:
         if action == "buy":
-            # Get the available USDT balance
             usdt_balance = get_wallet_balance("USDT")
 
             if usdt_balance > 0:
@@ -125,7 +124,6 @@ async def process_signal(symbol, action):
                 logger.info(f"Insufficient USDT balance to open a Buy position for {symbol}")
 
         elif action == "sell":
-            # Get the current position quantity of the symbol
             symbol_balance = get_wallet_balance('MYRO')
 
             if symbol_balance > 0:
@@ -150,14 +148,14 @@ async def check_price():
             current_price = get_current_price("MYROUSDT")
             price_change_percent = (current_price - current_buy_price) / current_buy_price * 100
             logger.info(f"Current buy price: {current_buy_price}, Current price: {current_price}, Price change: {price_change_percent:.2f}%")
-            if price_change_percent >= 0.8:
-                logger.info(f"Price increased by {price_change_percent:.2f}%. Selling MYRO.")
+            if price_change_percent >= 1.0:
+                logger.info(f"Price increased by {price_change_percent:.2f}%. Selling half of MYRO position.")
                 symbol_balance = get_wallet_balance('MYRO')
                 if symbol_balance > 0:
-                    symbol_balance = math.floor(symbol_balance)
-                    close_position("MYROUSDT", symbol_balance)
-                    current_buy_price = None  # Reset the current buy price
-        await asyncio.sleep(2)  # Check price every 5 seconds
+                    half_balance = math.floor(symbol_balance / 2)
+                    close_position("MYROUSDT", half_balance)
+                    current_buy_price = None
+            await asyncio.sleep(2)  # Check price every 2 seconds
 
 @app.on_event("startup")
 async def startup_event():
