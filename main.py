@@ -132,7 +132,7 @@ async def process_signal(symbol, action):
 
         elif action == "sell":
             # Get the current position quantity of the symbol
-            symbol_balance = get_wallet_balance('DOGE')
+            symbol_balance = get_wallet_balance('MYRO')
 
             if symbol_balance > 0:
                 symbol_balance = math.floor(symbol_balance)
@@ -153,15 +153,15 @@ async def check_price():
     global current_buy_price
     while True:
         if current_buy_price is not None:
-            current_price = get_current_price("DOGEUSDT")
+            current_price = get_current_price("MYROUSDT")
             price_change_percent = (current_price - current_buy_price) / current_buy_price * 100
             logger.info(f"Current buy price: {current_buy_price}, Current price: {current_price}, Price change: {price_change_percent:.2f}%")
-            if price_change_percent >= 2.5:
-                logger.info(f"Price increased by {price_change_percent:.2f}%. Selling DOGE.")
-                symbol_balance = get_wallet_balance('DOGE')
+            if price_change_percent >= 2:
+                logger.info(f"Price increased by {price_change_percent:.2f}%. Selling MYRO.")
+                symbol_balance = get_wallet_balance('MYRO')
                 if symbol_balance > 0:
                     symbol_balance = math.floor(symbol_balance)
-                    close_position("DOGEUSDT", symbol_balance)
+                    close_position("MYROUSDT", symbol_balance)
                     current_buy_price = None  # Reset the current buy price
         await asyncio.sleep(5)  # Check price every 5 seconds
 
