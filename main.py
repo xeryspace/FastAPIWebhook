@@ -163,8 +163,9 @@ async def process_signal(symbol, action):
 
 async def check_price():
     global current_buy_price_degen, current_buy_price_myro
-    target_profit_percent = 2.5
-    sell_threshold_percent = 2.0
+    target_profit_percent = 1.8
+    sell_threshold_percent = 1
+    target_loss_percent = -1.4
 
     while True:
         if current_buy_price_degen > 0:
@@ -186,6 +187,13 @@ async def check_price():
                         break
                     await asyncio.sleep(2)
 
+            if price_change_percent_degen <= target_loss_percent:
+                logger.info(f"Price decreased by {price_change_percent_degen:.2f}% for DEGENUSDT. Closing to minimize loss.")
+                symbol_balance_degen = get_wallet_balance("DEGEN")
+                if symbol_balance_degen > 100:
+                    symbol_balance_degen = math.floor(symbol_balance_degen)
+                    close_position("DEGENUSDT", symbol_balance_degen)
+
         if current_buy_price_myro > 0:
             current_price_myro = get_current_price("MYROUSDT")
             price_change_percent_myro = (current_price_myro - current_buy_price_myro) / current_buy_price_myro * 100
@@ -204,6 +212,13 @@ async def check_price():
                             close_position("MYROUSDT", symbol_balance_myro)
                         break
                     await asyncio.sleep(2)
+
+            if price_change_percent_myro <= target_loss_percent:
+                logger.info(f"Price decreased by {price_change_percent_myro:.2f}% for MYROUSDT. Closing to minimize loss.")
+                symbol_balance_myro = get_wallet_balance("MYRO")
+                if symbol_balance_myro > 10:
+                    symbol_balance_myro = math.floor(symbol_balance_myro)
+                    close_position("MYROUSDT", symbol_balance_myro)
 
         await asyncio.sleep(2)
 
