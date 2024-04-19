@@ -169,14 +169,10 @@ async def check_price():
     global current_buy_price_degen, current_buy_price_myro
     target_profit_percent = 1.8
     initial_sell_threshold_percent = 1
-    #target_loss_percent = -1.8
     profit_threshold_increment = 0.2
     sell_threshold_increment = 0.1
 
     while True:
-        current_time = datetime.datetime.now()
-        minutes = current_time.minute
-
         if current_buy_price_degen > 0:
             current_price_degen = get_current_price("DEGENUSDT")
             price_change_percent_degen = (current_price_degen - current_buy_price_degen) / current_buy_price_degen * 100
@@ -200,14 +196,7 @@ async def check_price():
                             symbol_balance_degen = math.floor(symbol_balance_degen)
                             close_position("DEGENUSDT", symbol_balance_degen)
                         break
-                    await asyncio.sleep(2)
-
-            #if minutes % 12 == 0 and price_change_percent_degen <= target_loss_percent:
-            #    logger.info(f"Price decreased by {price_change_percent_degen:.2f}% for DEGENUSDT. Closing to minimize loss.")
-            #    symbol_balance_degen = get_wallet_balance("DEGEN")
-            #    if symbol_balance_degen > 100:
-            #        symbol_balance_degen = math.floor(symbol_balance_degen)
-            #        close_position("DEGENUSDT", symbol_balance_degen)
+                    await asyncio.sleep(0.1)
 
         if current_buy_price_myro > 0:
             current_price_myro = get_current_price("MYROUSDT")
@@ -232,16 +221,8 @@ async def check_price():
                             symbol_balance_myro = math.floor(symbol_balance_myro)
                             close_position("MYROUSDT", symbol_balance_myro)
                         break
-                    await asyncio.sleep(2)
-
-            #if minutes % 12 == 0 and price_change_percent_myro <= target_loss_percent:
-            #    logger.info(f"Price decreased by {price_change_percent_myro:.2f}% for MYROUSDT. Closing to minimize loss.")
-            #    symbol_balance_myro = get_wallet_balance("MYRO")
-            #    if symbol_balance_myro > 10:
-            #        symbol_balance_myro = math.floor(symbol_balance_myro)
-            #        close_position("MYROUSDT", symbol_balance_myro)
-
-        await asyncio.sleep(2)
+                    await asyncio.sleep(0.1)
+        await asyncio.sleep(0.1)
 
 @app.on_event("startup")
 async def startup_event():
