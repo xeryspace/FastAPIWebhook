@@ -171,7 +171,7 @@ async def check_price():
     initial_sell_threshold_percent = 1
     #target_loss_percent = -1.8
     profit_threshold_increment = 0.2
-    sell_threshold_increment = 0.2
+    sell_threshold_increment = 0.1
 
     while True:
         current_time = datetime.datetime.now()
