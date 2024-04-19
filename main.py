@@ -163,26 +163,47 @@ async def process_signal(symbol, action):
 
 async def check_price():
     global current_buy_price_degen, current_buy_price_myro
+    target_profit_percent = 2.5
+    sell_threshold_percent = 2.0
+
     while True:
         if current_buy_price_degen > 0:
             current_price_degen = get_current_price("DEGENUSDT")
             price_change_percent_degen = (current_price_degen - current_buy_price_degen) / current_buy_price_degen * 100
-            if price_change_percent_degen >= 2.4:
-                logger.info(f"Price increased by {price_change_percent_degen:.2f}% for DEGENUSDT. Selling DEGEN.")
-                symbol_balance_degen = get_wallet_balance("DEGEN")
-                if symbol_balance_degen > 100:
-                    symbol_balance_degen = math.floor(symbol_balance_degen)
-                    close_position("DEGENUSDT", symbol_balance_degen)
+
+            if price_change_percent_degen >= target_profit_percent:
+                logger.info(f"Price increased by {price_change_percent_degen:.2f}% for DEGENUSDT. Monitoring for sell threshold.")
+                while True:
+                    current_price_degen = get_current_price("DEGENUSDT")
+                    price_change_percent_degen = (current_price_degen - current_buy_price_degen) / current_buy_price_degen * 100
+
+                    if price_change_percent_degen <= sell_threshold_percent:
+                        logger.info(f"Price retraced to {price_change_percent_degen:.2f}% for DEGENUSDT. Selling DEGEN.")
+                        symbol_balance_degen = get_wallet_balance("DEGEN")
+                        if symbol_balance_degen > 100:
+                            symbol_balance_degen = math.floor(symbol_balance_degen)
+                            close_position("DEGENUSDT", symbol_balance_degen)
+                        break
+                    await asyncio.sleep(2)
 
         if current_buy_price_myro > 0:
             current_price_myro = get_current_price("MYROUSDT")
             price_change_percent_myro = (current_price_myro - current_buy_price_myro) / current_buy_price_myro * 100
-            if price_change_percent_myro >= 2.4:
-                logger.info(f"Price increased by {price_change_percent_myro:.2f}% for MYROUSDT. Selling MYRO.")
-                symbol_balance_myro = get_wallet_balance("MYRO")
-                if symbol_balance_myro > 10:
-                    symbol_balance_myro = math.floor(symbol_balance_myro)
-                    close_position("MYROUSDT", symbol_balance_myro)
+
+            if price_change_percent_myro >= target_profit_percent:
+                logger.info(f"Price increased by {price_change_percent_myro:.2f}% for MYROUSDT. Monitoring for sell threshold.")
+                while True:
+                    current_price_myro = get_current_price("MYROUSDT")
+                    price_change_percent_myro = (current_price_myro - current_buy_price_myro) / current_buy_price_myro * 100
+
+                    if price_change_percent_myro <= sell_threshold_percent:
+                        logger.info(f"Price retraced to {price_change_percent_myro:.2f}% for MYROUSDT. Selling MYRO.")
+                        symbol_balance_myro = get_wallet_balance("MYRO")
+                        if symbol_balance_myro > 10:
+                            symbol_balance_myro = math.floor(symbol_balance_myro)
+                            close_position("MYROUSDT", symbol_balance_myro)
+                        break
+                    await asyncio.sleep(2)
 
         await asyncio.sleep(2)
 
