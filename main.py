@@ -125,7 +125,10 @@ async def process_signal(symbol, action):
         if action == "buy":
             usdt_balance = get_wallet_balance("USDT")
             if usdt_balance > 5:
-                rounded_down = math.floor(usdt_balance / 2)  # Divide the balance by 2 to allocate for each coin
+                if usdt_balance > 400:
+                    rounded_down = math.floor(usdt_balance / 2)  # Divide the balance by 2 to allocate for each coin
+                else:
+                    rounded_down = math.floor(usdt_balance)  # Use the entire remaining balance for the next coin
                 open_position(symbol, rounded_down)
                 if symbol == "DEGENUSDT":
                     current_buy_price_degen = get_current_price(symbol)
