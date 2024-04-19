@@ -6,7 +6,7 @@ import math
 from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
 
-current_buy_price = None
+current_buy_price = 0
 
 app = FastAPI()
 
@@ -105,7 +105,8 @@ def close_position(symbol, amount):
     try:
         session.place_order(
             category="spot", symbol=symbol, side='sell', orderType="Market", qty=amount)
-        current_buy_price = None
+        current_buy_price = 0
+        print(current_buy_price)
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
         raise
@@ -114,10 +115,9 @@ async def process_signal(symbol, action):
     global current_buy_price
     try:
         if action == "buy":
-            # Get the available USDT balance
             usdt_balance = get_wallet_balance("USDT")
 
-            if usdt_balance > 0:
+            if usdt_balance > 5:
                 rounded_down = math.floor(usdt_balance)
                 open_position(symbol, rounded_down)
                 current_buy_price = get_current_price(symbol)  # Update the current buy price
@@ -128,11 +128,11 @@ async def process_signal(symbol, action):
             # Get the current position quantity of the symbol
             symbol_balance = get_wallet_balance('MYRO')
 
-            if symbol_balance > 0:
+            if symbol_balance > 10:
                 symbol_balance = math.floor(symbol_balance)
                 logger.info(f"Closing {symbol} position with quantity: {symbol_balance}")
                 close_position(symbol, symbol_balance)
-                current_buy_price = None  # Reset the current buy price
+                current_buy_price = 0  # Reset the current buy price
             else:
                 logger.info(f"No {symbol} position to close")
 
@@ -146,19 +146,16 @@ async def process_signal(symbol, action):
 async def check_price():
     global current_buy_price
     while True:
-        if current_buy_price is not None:
+        if current_buy_price > 0:
             current_price = get_current_price("MYROUSDT")
             price_change_percent = (current_price - current_buy_price) / current_buy_price * 100
-            logger.info(f"Current buy price: {current_buy_price}, Current price: {current_price}, Price change: {price_change_percent:.2f}%")
-            if price_change_percent >= 1:
+            if price_change_percent >= 0.8:
                 logger.info(f"Price increased by {price_change_percent:.2f}%. Selling MYRO.")
                 symbol_balance = get_wallet_balance('MYRO')
-                if symbol_balance > 0:
+                if symbol_balance > 10:
                     symbol_balance = math.floor(symbol_balance)
-                    to_close_profits = symbol_balance / 2
-                    close_position("MYROUSDT", to_close_profits)
-                    current_buy_price = None  # Reset the current buy price
-        await asyncio.sleep(2)  # Check price every 5 seconds
+                    close_position("MYROUSDT", symbol_balance)
+        await asyncio.sleep(2)
 
 @app.on_event("startup")
 async def startup_event():
