@@ -5,11 +5,6 @@ import math
 
 from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
-from datetime import datetime, timedelta
-from threading import Lock
-
-position_lock = Lock()
-position_processing = {}
 
 current_buy_price = None
 
@@ -19,7 +14,6 @@ api_key = 'ULI4j96SQhGePVhxCu'
 api_secret = 'XnBhumm73kDKJSFDFLKEZSLkkX2KwMvAj4qC'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
