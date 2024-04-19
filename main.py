@@ -167,10 +167,10 @@ async def process_signal(symbol, action):
 
 async def check_price():
     global current_buy_price_degen, current_buy_price_myro
-    target_profit_percent = 1.8
+    target_profit_percent = 1.6
     initial_sell_threshold_percent = 1
     profit_threshold_increment = 0.2
-    sell_threshold_increment = 0.1
+    sell_threshold_increment = 0.2
 
     while True:
         if current_buy_price_degen > 0:
