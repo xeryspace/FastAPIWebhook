@@ -156,7 +156,7 @@ async def check_price():
             current_price = get_current_price("DOGEUSDT")
             price_change_percent = (current_price - current_buy_price) / current_buy_price * 100
             logger.info(f"Current buy price: {current_buy_price}, Current price: {current_price}, Price change: {price_change_percent:.2f}%")
-            if price_change_percent >= 1.65:
+            if price_change_percent >= 2.5:
                 logger.info(f"Price increased by {price_change_percent:.2f}%. Selling DOGE.")
                 symbol_balance = get_wallet_balance('DOGE')
                 if symbol_balance > 0:
