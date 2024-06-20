@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading App</title>
+<link rel="stylesheet" href="static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Playbit</h1>
+        <form id="tradeForm">
+            <label for="stopLoss">Stop Loss</label>
+            <input type="number" id="stopLoss" name="stopLoss" required>
+            <label for="takeProfit">Take Profit (optional)</label>
+            <input type="number" id="takeProfit" name="takeProfit">
+            <label for="amountToRisk">Amount to Risk</label>
+            <input type="number" id="amountToRisk" name="amountToRisk" value="50" required>
+            <label for="chainWinners">
+                <input type="checkbox" id="chainWinners" name="chainWinners" checked>
+                Chain Winning Trades
+            </label>
+            <button type="submit">Place Trade</button>
+        </form>
+        <div class="message" id="message"></div>
+    </div>
+
+<script src="static/script.js"></script>
+</body>
+</html>
