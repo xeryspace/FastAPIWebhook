@@ -1,30 +1,38 @@
-document.getElementById('tradeForm').addEventListener('submit', async function(event) {
-    event.preventDefault();
-    const stopLoss = document.getElementById('stopLoss').value;
-    const takeProfit = document.getElementById('takeProfit').value;
-    const amountToRisk = document.getElementById('amountToRisk').value;
-    const chainWinners = document.getElementById('chainWinners').checked;
-    const messageDiv = document.getElementById('message');
+document.addEventListener('DOMContentLoaded', function() {
+    const tradeForm = document.getElementById('tradeForm');
+    const tradeResult = document.getElementById('tradeResult');
 
-    try {
-        const response = await fetch('/trade', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                stop_loss: parseFloat(stopLoss),
-                take_profit: parseFloat(takeProfit) || null,
-                amount_to_risk: parseFloat(amountToRisk),
-                chain_winners: chainWinners
-            })
-        });
+    tradeForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const tradingPair = document.getElementById('tradingPair').value.toUpperCase() || 'ETHUSDT';
+        const stopLoss = document.getElementById('stopLoss').value;
+        const takeProfit = document.getElementById('takeProfit').value;
+        const amountToRisk = document.getElementById('amountToRisk').value;
+        const chainWinners = document.getElementById('chainWinners').checked;
 
-        const result = await response.json();
-        messageDiv.textContent = result.message;
-        messageDiv.style.color = result.status === 'success' ? 'green' : 'red';
-    } catch (error) {
-        messageDiv.textContent = 'An error occurred: ' + error.message;
-        messageDiv.style.color = 'red';
-    }
+        try {
+            const response = await fetch('/trade', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    trading_pair: tradingPair,
+                    stop_loss: parseFloat(stopLoss),
+                    take_profit: parseFloat(takeProfit) || null,
+                    amount_to_risk: parseFloat(amountToRisk),
+                    chain_winners: chainWinners
+                })
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                tradeResult.innerHTML = `<p style="color: green;">${result.message}</p>`;
+            } else {
+                tradeResult.innerHTML = `<p style="color: red;">Error: ${result.message}</p>`;
+            }
+        } catch (error) {
+            tradeResult.innerHTML = `<p style="color: red;">An error occurred: ${error.message}</p>`;
+        }
+    });
 });
